@@ -1,0 +1,10 @@
+[flake8]
+exclude = __pycache__, .venv
+max-line-length = 100
+max-complexity = 4
+enable-extensions = G
+import-order-style = pep8
+show-source = true
+ignore = C812, C813, C814, C815, C816, D100, D101, D102, D103, D104, D105, D106, D107
+eradicate-aggressive = True
+annoy = True

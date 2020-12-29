@@ -1,0 +1,32 @@
+version: 1
+
+disable_existing_loggers: false
+
+formatters:
+  brief:
+    format: '%(asctime)s %(levelname)-7s: %(message)s'
+    datefmt: '%H:%M:%S'
+  default:
+    format: '%(asctime)s %(levelname)s: %(message)s --- [%(name)s:%(lineno)d]'
+    datefmt: '%Y.%m.%d %H:%M:%S'
+
+handlers:
+  console:
+    class: logging.StreamHandler
+    formatter: brief
+    level: DEBUG
+    stream: ext://sys.stdout
+  empty:
+    class: logging.NullHandler
+    level: DEBUG
+
+loggers:
+  wikipediaapi:
+    level: WARN
+  httpx:
+    level: WARN
+  asyncio:
+    level: WARN
+root:
+  level: DEBUG
+  handlers: [ console ]
