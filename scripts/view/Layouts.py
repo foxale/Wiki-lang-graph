@@ -8,10 +8,7 @@ def degree_bipartite_layout(G, left_nodes, right_nodes):
     right_h_distance = 1 / len(degrees)
 
     for k in right_nodes:
-        v = [
-            result[k][0] + degrees.index(G.degree(k)) * right_h_distance,
-            result[k][1]
-        ]
+        v = [result[k][0] + degrees.index(G.degree(k)) * right_h_distance, result[k][1]]
         result[k] = v
 
     return result
