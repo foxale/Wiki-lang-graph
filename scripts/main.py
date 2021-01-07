@@ -2,17 +2,30 @@ import logging
 import os
 
 import asyncio
-import sys
 
 import networkx as nx
+from bokeh.server.server import Server
+from tornado.ioloop import IOLoop
 
+from scripts.view.View import View
+from scripts.viewmodel.ViewModel import ViewModel
 from scripts.wikilanggraph import generate_lang_graph
 from scripts.wikilanggraph import enable_logging
+from scripts.wikilanggraph.Model import Model
+from tornado.platform.asyncio import AsyncIOMainLoop
 from scripts.wikilanggraph.metrics.dissimilarity import calculate_dissimilarity_metrics
 from scripts.wikilanggraph.lang_graph.generate_lang_graph import initialize_graph
 from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
     initialize_starting_page,
 )
+
+AsyncIOMainLoop().install()
+
+model = Model()
+view_model = ViewModel(model=model)
+view = View(view_model=view_model)
+server = Server({"/": view.modify_doc}, io_loop=IOLoop.current(), num_procs=1)
+server.start()
 
 
 async def main() -> int:
@@ -44,4 +57,6 @@ def init_logging() -> None:
 
 if __name__ == "__main__":
     init_logging()
-    sys.exit(asyncio.run(main(), debug=True) or 0)
+    asyncio.run(main(), debug=True)
+    server.io_loop.add_callback(server.show, "/")
+    server.io_loop.start()
