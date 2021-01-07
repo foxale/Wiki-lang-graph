@@ -14,13 +14,15 @@ class ViewModel:
         self.timeline_values = []
         self.selected_timeline_value = None
         self.analysis_mode = 0
-        self.analysis_options = ["Article analysis (no backlinks)", "Network analysis (with backlinks)"]
+        self.analysis_options = [
+            "Article analysis (no backlinks)",
+            "Network analysis (with backlinks)",
+        ]
 
     def update_link(self, link):
         self.link = link
         #         read network
-        self.model.get_article_data(title="Bitwa pod Cedynią")
-        self.network = self.model.network
+        self.network, _, _ = self.model.get_article_data(title="Bitwa pod Cedynią")
         self.available_languages = ["pl", "en", "de", "fr", "cz"]
         self.selected_languages = self.available_languages
         self.timeline_values = ["2019-01-01", "2020-12-31"]
@@ -43,7 +45,7 @@ class ViewModel:
     #         update network
 
     def get_network(self):
-        G = self.model.network
+        G, _, _ = self.model.get_article_data(title="Bitwa pod Cedynią")
         return G, nx.bipartite.sets(G)[0], nx.bipartite.sets(G)[1]
 
     def get_nodes_names(self):
