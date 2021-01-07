@@ -48,6 +48,6 @@ def init_logging() -> None:
 
 if __name__ == "__main__":
     # init_logging()
-    asyncio.run(main(), debug=True)
+    # asyncio.run(main(), debug=True)
     server.io_loop.add_callback(server.show, "/")
     server.io_loop.start()

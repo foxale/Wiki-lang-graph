@@ -111,6 +111,7 @@ class View:
                     self.input_error_message = "Link %s not found." % old
                     self.view_model.update_link(None)
                 doc.clear()
+                # print(list(self.view_model.model.network)[5:])
                 self.modify_doc(doc)
 
             text_input.on_change('value', update_link)
