@@ -1,18 +1,28 @@
-import logging
 import os
 
 import asyncio
 import sys
 
 import networkx as nx
+from bokeh.io import show
+from bokeh.server.server import Server
+from tornado.ioloop import IOLoop
 
-from scripts.wikilanggraph import generate_lang_graph
+from scripts.view.View import View
+from scripts.viewmodel.ViewModel import ViewModel
+from scripts.wikilanggraph import generate_page_graph
 from scripts.wikilanggraph import enable_logging
-from scripts.wikilanggraph.metrics.dissimilarity import calculate_dissimilarity_metrics
-from scripts.wikilanggraph.lang_graph.generate_lang_graph import initialize_graph
-from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
-    initialize_starting_page,
-)
+from scripts.wikilanggraph.Model import Model
+from tornado.platform.asyncio import AsyncIOMainLoop
+
+AsyncIOMainLoop().install()
+
+model = Model()
+view_model = ViewModel(model=model)
+view = View(view_model=view_model)
+server = Server({"/": view.modify_doc}, io_loop=IOLoop.current(), num_procs=1)
+# IOLoop.current().spawn_callback(view.modify_doc)
+server.start()
 
 
 async def main() -> int:
@@ -20,19 +30,13 @@ async def main() -> int:
     article_name = "Bitwa pod Cedynią"
     article_language = "pl"
 
-    graph = initialize_graph()
-    starting_page = initialize_starting_page(
-        language=article_language, title=article_name
+    graph: nx.Graph = await generate_page_graph(
+        article_name=article_name,
+        article_language=article_language,
+        languages=languages,
     )
-    graph: nx.Graph = await generate_lang_graph(
-        graph=graph, starting_page=starting_page, languages=languages
-    )
-    metrics = calculate_dissimilarity_metrics(graph=graph)
-    timestamps = starting_page.timepoints_all_languages
-
-    logging.info("Graph: \n %s", nx.info(graph))
-    logging.info("Metrics: \n %s", metrics.to_string())
-    logging.info("Timestamps: %s", timestamps)
+    print(nx.info(graph))
+    print(list(graph)[10:])
 
     return 0
 
@@ -43,5 +47,7 @@ def init_logging() -> None:
 
 
 if __name__ == "__main__":
-    init_logging()
-    sys.exit(asyncio.run(main(), debug=True) or 0)
+    # init_logging()
+    asyncio.run(main(), debug=True)
+    server.io_loop.add_callback(server.show, "/")
+    server.io_loop.start()
