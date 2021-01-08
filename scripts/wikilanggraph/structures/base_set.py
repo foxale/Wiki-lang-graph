@@ -1,29 +1,30 @@
 __all__ = ["BaseSet"]
 
 from collections import Hashable
+from collections import Iterable
 from collections import MutableSet
 
 
 class BaseSet(Hashable, MutableSet):
     __hash__ = MutableSet._hash
 
-    def __init__(self, iterable=()):
-        self.data = set(iterable)
+    def __init__(self, iterable: Iterable = ()):
+        self._data = set(iterable)
 
     def __contains__(self, value):
-        return value in self.data
+        return value in self._data
 
     def __iter__(self):
-        return iter(self.data)
+        return iter(self._data)
 
     def __len__(self):
-        return len(self.data)
+        return len(self._data)
 
     def __repr__(self):
-        return repr(self.data)
+        return repr(self._data)
 
     def add(self, item):
-        self.data.add(item)
+        self._data.add(item)
 
     def discard(self, item):
-        self.data.discard(item)
+        self._data.discard(item)

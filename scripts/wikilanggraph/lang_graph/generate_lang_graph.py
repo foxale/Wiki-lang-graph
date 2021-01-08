@@ -7,14 +7,15 @@ from typing import Optional
 import httpx
 import networkx as nx
 
-from scripts.wikilanggraph.page import Page
+from scripts.wikilanggraph.lang_graph import LangGraph
+from scripts.wikilanggraph.wikipedia_page.page import Page
 
 logger = logging.getLogger(__name__)
 
 
 def initialize_graph() -> nx.Graph:
     """Create and return an empty graph structure"""
-    graph = nx.Graph()
+    graph = LangGraph()
     logger.info("Created an empty graph structure")
     return graph
 
@@ -62,21 +63,17 @@ async def fetch_pages_links(client: httpx.AsyncClient, page: Page) -> None:
     logging.info('Fetched pages "%s" links "%s"', page, set(page.links))
 
 
-async def generate_page_graph(
-    article_name: str, article_language: str, languages: Iterable[str]
+async def generate_lang_graph(
+    graph: nx.Graph, starting_page: Page, languages: Iterable[str]
 ) -> nx.Graph:
 
-    G = initialize_graph()
-    starting_page = initialize_starting_page(
-        language=article_language, title=article_name
-    )
     async with httpx.AsyncClient() as client:
         await fetch_starting_page(client=client, page=starting_page)
-        add_starting_page_to_graph(graph=G, page=starting_page)
+        add_starting_page_to_graph(graph=graph, page=starting_page)
         await fetch_starting_page_langlinks(
             client=client, page=starting_page, languages=languages
         )
-        add_starting_pages_langlinks_to_graph(graph=G, page=starting_page)
+        add_starting_pages_langlinks_to_graph(graph=graph, page=starting_page)
 
         tasks = {}
         for langlink in starting_page.all_language_versions:
@@ -84,7 +81,7 @@ async def generate_page_graph(
         await asyncio.gather(*tasks.values())
 
         for langlink in starting_page.all_language_versions:
-            G.add_nodes_from(langlink.links_as_graph_nodes)
-            G.add_edges_from(langlink.links_as_graph_edges)
+            graph.add_nodes_from(langlink.links_as_graph_nodes)
+            graph.add_edges_from(langlink.links_as_graph_edges)
 
-    return G
+    return graph
