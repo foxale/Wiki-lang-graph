@@ -7,9 +7,9 @@ import networkx as nx
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
 
+from scripts.wikilanggraph import generate_lang_graph
 from scripts.view.View import View
 from scripts.viewmodel.ViewModel import ViewModel
-from scripts.wikilanggraph import generate_lang_graph
 from scripts.wikilanggraph import enable_logging
 from scripts.wikilanggraph.metrics.dissimilarity import calculate_dissimilarity_metrics
 from scripts.wikilanggraph.lang_graph.generate_lang_graph import initialize_graph
@@ -19,10 +19,6 @@ from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
 from scripts.wikilanggraph.wikipedia_page import Page
 from scripts.wikilanggraph.wikipedia_page import RevisionKey
 from scripts.wikilanggraph.Model import Model
-
-# from tornado.platform.asyncio import AsyncIOMainLoop
-
-# AsyncIOMainLoop().install()
 
 
 async def main() -> int:
@@ -37,6 +33,15 @@ async def main() -> int:
     graph = await generate_lang_graph(
         graph=graph, starting_page=starting_page, languages=languages
     )
+    graph: nx.Graph = await generate_lang_graph(
+        graph=graph, starting_page=starting_page, languages=languages
+    )
+    metrics = calculate_dissimilarity_metrics(graph=graph)
+    timestamps = starting_page.timepoints_all_languages
+
+    logging.info("Graph: \n %s", nx.info(graph))
+    logging.info("Metrics: \n %s", metrics.to_string())
+    logging.info("Timestamps: %s", timestamps)
     metrics = calculate_dissimilarity_metrics(graph=graph)
     timestamps = starting_page.timepoints_all_languages
     temp_timestamp: RevisionKey = timestamps[0]
