@@ -7,8 +7,6 @@ import networkx as nx
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
 
-from scripts.view.View import View
-from scripts.viewmodel.ViewModel import ViewModel
 from scripts.wikilanggraph import generate_lang_graph
 from scripts.wikilanggraph import enable_logging
 from scripts.wikilanggraph.Model import Model
