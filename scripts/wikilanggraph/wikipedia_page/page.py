@@ -9,6 +9,7 @@ from collections import Generator
 from collections import Iterable
 from contextlib import suppress
 from dataclasses import dataclass
+from json import JSONEncoder
 
 import dateutil.parser
 from typing import Any
@@ -38,6 +39,7 @@ class Page:
         revision: str = None,
         timestamp: str = None,
     ) -> None:
+        super().__init__()
         self._aliases: set[str] = set()
         self._title: str = title
         self._language: str = language
@@ -51,11 +53,27 @@ class Page:
         self._valid: bool = True
         self._revisions: RevisionKeys[RevisionKey] = RevisionKeys()
 
+    def to_serializable(self):
+        dict_repr = self.__dict__
+        attribute_mapping = {
+            "_language": "language",
+            "_displaytitle": "title",
+            "_timestamp": "timestamp",
+        }
+        return {
+            attribute_mapping[k]: v
+            for k, v in dict_repr.items()
+            if k in attribute_mapping
+        }
+
     def __repr__(self: Page) -> str:
         return (
             f"Page(title={self._title}, displaytitle={self._displaytitle},"
             f" lang={self._language}, wikibase_item={self._wikibase_item})"
         )
+
+    def default(self, o):
+        return super().default(o.__dict__)
 
     @property
     def language(self: Page) -> str:
@@ -337,8 +355,11 @@ class PageKeySet(BaseSet):
 
     def graph_nodes_generator(
         self: PageKeySet,
-    ) -> Generator[tuple[str, dict[str, Page]], None, None]:
-        return ((page.wikibase_item, {"page": page}) for page in self.pages)
+    ) -> Generator[tuple[str, dict[str, dict]], Any, None]:
+        return (
+            (page.wikibase_item, {"page": page.to_serializable()})
+            for page in self.pages
+        )
 
     async def fetch_pages_coroutines(
         self: Page, client: httpx.AsyncClient, *args: Any, **kwargs: Any

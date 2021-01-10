@@ -1,3 +1,5 @@
+import logging
+
 import networkx as nx
 
 right_node_count = 50
@@ -10,7 +12,7 @@ class ViewModel:
         self.link = None
         self.network = None
         self.available_languages = []
-        self.selected_languages = None
+        self.selected_languages = []
         self.timeline_values = []
         self.selected_timeline_value = None
         self.analysis_mode = 0
@@ -19,31 +21,31 @@ class ViewModel:
             "Network analysis (with backlinks)",
         ]
 
-    def update_link(self, link):
-        self.link = link
+    async def update_link(self):
+        logging.debug("Update link")
+        # self.link = link
         #         read network
-        self.model.get_article_data(title="Bitwa pod Cedynią")
+        print(self.link)
+        await self.model.get_article_data(title="Bitwa pod Cedynią")
         self.network = self.model.network
+        print(self.network)
         self.available_languages = ["pl", "en", "de", "fr", "cz"]
         self.selected_languages = self.available_languages
         self.timeline_values = ["2019-01-01", "2020-12-31"]
         self.selected_timeline_value = self.timeline_values[0]
-        print(link)
 
     def is_existing(self, link):
         return link == "wiki"
 
     def update_selected_languages(self, selected):
         self.selected_languages = selected
-        print(selected)
-
-    #         update network
+        print("selected languages:", selected)
+        # update network
 
     def update_analysis_mode(self, selected):
         self.analysis_mode = selected
         print(selected)
-
-    #         update network
+        # update network
 
     def get_network(self):
         G = self.model.network

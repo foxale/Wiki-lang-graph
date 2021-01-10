@@ -43,7 +43,7 @@ async def fetch_starting_page_langlinks(
 
 def add_starting_page_to_graph(graph: nx.Graph, page: Page) -> None:
     """Add starting page to graph"""
-    graph.add_node(page.wikibase_item, page=page)
+    graph.add_node(page.wikibase_item, page=page.to_serializable())
     logging.info('Added starting page "%s" to graph "%s"', page, graph.nodes(data=True))
 
 
