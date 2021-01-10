@@ -22,7 +22,7 @@ from bokeh.models import (
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 
-from scripts.view.Layouts import degree_bipartite_layout
+from scripts.view.Layouts import degree_bipartite_layout, get_degree_map
 
 
 class View:
@@ -42,13 +42,20 @@ class View:
             )
             print("got the network")
 
-            width = 900
-            height = 20 * len(right_nodes)
+            width = 1000
+
+            right_nodes_degree_map = get_degree_map(G, subset=right_nodes)
+            print(right_nodes_degree_map)
+            key_largest_right_subset = max(right_nodes_degree_map, key=lambda deg: len(right_nodes_degree_map[deg]))
+            # print(len(largest_right_subset))
+            height = 15 * len(right_nodes_degree_map[key_largest_right_subset])
+            vertical_margin = 0.05 * width/height
+
             plot = Plot(
                 plot_width=width,
                 plot_height=height,
                 x_range=Range1d(-1.1, 1.1),
-                y_range=Range1d(-height / (2 * width), height / (2 * width)),
+                y_range=Range1d(-0.5 - vertical_margin, 0.5 + vertical_margin),
             )
             plot.title.text = "Visualization of article versions and links"
 
@@ -56,7 +63,6 @@ class View:
 
             layout = degree_bipartite_layout(G, left_nodes, right_nodes)
             graph_renderer = from_networkx(G, layout, scale=1, center=(0, 0))
-            breakpoint()
 
             graph_renderer.node_renderer.data_source.data["name"] = self.view_model.get_nodes_names()
             graph_renderer.node_renderer.data_source.data["fragment"] = self.view_model.get_nodes_fragments()
@@ -75,7 +81,7 @@ class View:
             graph_renderer.node_renderer.data_source.data["alpha"] = alpha
 
             graph_renderer.node_renderer.glyph = Circle(
-                size=15,
+                size=12,
                 fill_color="color",
                 fill_alpha="alpha",
                 line_color="color",
@@ -84,7 +90,7 @@ class View:
             )
 
             graph_renderer.node_renderer.selection_glyph = Circle(
-                size=15,
+                size=12,
                 fill_color="color",
                 fill_alpha="alpha",
                 line_color="color",
@@ -93,7 +99,7 @@ class View:
             )
 
             graph_renderer.node_renderer.hover_glyph = Circle(
-                size=15,
+                size=13,
                 fill_color="color",
                 fill_alpha="alpha",
                 line_color="color",
@@ -130,7 +136,7 @@ class View:
         def make_timeline_slider():
             header = Paragraph(
                 text="Select moment in time: %s"
-                % self.view_model.selected_timeline_value
+                     % self.view_model.selected_timeline_value
             )
 
             selected_index = (
@@ -166,21 +172,21 @@ class View:
 
             def update_link(attr, old, new):
                 doc.clear()
-                self.modify_doc(doc)
+                
+                async def proceed_update(new):
+                    await self.view_model.update_link()
+                    self.modify_doc(doc)
 
                 if self.view_model.is_existing(new):
                     print("YAY!")
                     self.input_error_message = None
                     self.view_model.link = new
-                    curdoc().add_next_tick_callback(self.view_model.update_link)
-
-                    # self.view_model.update_link(new)
+                    curdoc().add_next_tick_callback(lambda: proceed_update(new))
                 else:
                     print("boooo....")
                     self.input_error_message = "Link %s not found." % old
                     self.view_model.link = None
-                    curdoc().add_next_tick_callback(self.view_model.update_link)
-                    # self.view_model.update_link(None)
+                    self.modify_doc(doc)
 
             text_input.on_change("value", update_link)
             return text_input
@@ -268,7 +274,7 @@ class View:
                     column(
                         make_static_header("Most different versions: "),
                         make_static_header("Difference is: "),
-                        self.visualization,
+                        make_graph(),
                         margin=(10, 10, 10, 10),
                     ),
                 )
