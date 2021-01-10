@@ -19,16 +19,10 @@ from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
 from scripts.wikilanggraph.wikipedia_page import Page
 from scripts.wikilanggraph.wikipedia_page import RevisionKey
 from scripts.wikilanggraph.Model import Model
-from tornado.platform.asyncio import AsyncIOMainLoop
 
-AsyncIOMainLoop().install()
+# from tornado.platform.asyncio import AsyncIOMainLoop
 
-model = Model()
-view_model = ViewModel(model=model)
-view = View(view_model=view_model)
-server = Server({"/": view.modify_doc}, io_loop=IOLoop.current(), num_procs=1)
-# IOLoop.current().spawn_callback(view.modify_doc)
-server.start()
+# AsyncIOMainLoop().install()
 
 
 async def main() -> int:
@@ -70,7 +64,14 @@ def init_logging() -> None:
 
 
 if __name__ == "__main__":
-    # init_logging()
+    init_logging()
     # asyncio.run(main(), debug=True)
+
+    model = Model()
+    view_model = ViewModel(model=model)
+    view = View(view_model=view_model)
+    server = Server({"/": view.modify_doc}, io_loop=IOLoop.current(), num_procs=1)
+    server.start()
+
     server.io_loop.add_callback(server.show, "/")
     server.io_loop.start()

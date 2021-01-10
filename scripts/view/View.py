@@ -1,6 +1,7 @@
 import random
 
 from bokeh.document import without_document_lock
+from bokeh.io import curdoc
 from bokeh.layouts import column, row
 from bokeh.models import (
     Plot,
@@ -20,7 +21,6 @@ from bokeh.models import (
 )
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
-from tornado.ioloop import IOLoop
 
 from scripts.view.Layouts import degree_bipartite_layout
 
@@ -31,265 +31,14 @@ class View:
         self.input_error_message = None
         self.visualization = None
 
-    # @without_document_lock
+    @without_document_lock
     def modify_doc(self, doc):
         def make_graph():
             print("star drawing")
             G, left_nodes, right_nodes = (
                 self.view_model.network,
-                ["Q551419", "Q53436", "Q1902443", "Q2607319", "Q7695"],
-                [
-                    "Q184481",
-                    "Q8030290",
-                    "Q697224",
-                    "Q28989",
-                    "Q428713",
-                    "Q9283394",
-                    "Q8083",
-                    "Q511158",
-                    "Q570164",
-                    "Q1733",
-                    "Q42884",
-                    "Q393",
-                    "Q270",
-                    "Q29182",
-                    "Q1540926",
-                    "Q837268",
-                    "Q88598",
-                    "Q53435",
-                    "Q12548",
-                    "Q9379230",
-                    "Q207645",
-                    "Q180898",
-                    "Q11714162",
-                    "Q1187484",
-                    "Q275425",
-                    "Q1569578",
-                    "Q1259667",
-                    "Q11826232",
-                    "Q890527",
-                    "Q2",
-                    "Q313099",
-                    "Q9168901",
-                    "Q10950147",
-                    "Q47315",
-                    "Q23575",
-                    "Q7015",
-                    "Q12554",
-                    "Q11755799",
-                    "Q405155",
-                    "Q192620",
-                    "Q1250916",
-                    "Q2597214",
-                    "Q326712",
-                    "Q2426",
-                    "Q428443",
-                    "Q40623",
-                    "Q696726",
-                    "Q134435",
-                    "Q36",
-                    "Q1937043",
-                    "Q2665",
-                    "Q29171",
-                    "Q201823",
-                    "Q913582",
-                    "Q149425",
-                    "Q12743",
-                    "Q17648140",
-                    "Q11747768",
-                    "Q4191783",
-                    "Q552",
-                    "Q11720431",
-                    "Q350504",
-                    "Q156108",
-                    "Q20643855",
-                    "Q677905",
-                    "Q104520",
-                    "Q3284197",
-                    "Q4501675",
-                    "Q268",
-                    "Q14945",
-                    "Q2429",
-                    "Q183",
-                    "Q40477",
-                    "Q1892006",
-                    "Q43915",
-                    "Q11736229",
-                    "Q2329143",
-                    "Q954143",
-                    "Q680838",
-                    "Q545",
-                    "Q16513244",
-                    "Q703390",
-                    "Q1862",
-                    "Q50872",
-                    "Q1644",
-                    "Q748289",
-                    "Q63166",
-                    "Q8890160",
-                    "Q2150462",
-                    "Q101985",
-                    "Q1541827",
-                    "Q677501",
-                    "Q669970",
-                    "Q150512",
-                    "Q251395",
-                    "Q3044",
-                    "Q59532",
-                    "Q146246",
-                    "Q8052",
-                    "Q11710470",
-                    "Q583223",
-                    "Q212658",
-                    "Q371409",
-                    "Q860981",
-                    "Q207272",
-                    "Q277392",
-                    "Q1140492",
-                    "Q598774",
-                    "Q593045",
-                    "Q723957",
-                    "Q315921",
-                    "Q138107",
-                    "Q422376",
-                    "Q698027",
-                    "Q246863",
-                    "Q74302",
-                    "Q3355920",
-                    "Q13408539",
-                    "Q605977",
-                    "Q1773668",
-                    "Q172107",
-                    "Q1049697",
-                    "Q3636391",
-                    "Q1132994",
-                    "Q170346",
-                    "Q6722016",
-                    "Q152499",
-                    "Q641479",
-                    "Q718839",
-                    "Q2026486",
-                    "Q631991",
-                    "Q1236849",
-                    "Q2985977",
-                    "Q932228",
-                    "Q703893",
-                    "Q2505294",
-                    "Q1132940",
-                    "Q164092",
-                    "Q159512",
-                    "Q840454",
-                    "Q7510414",
-                    "Q631163",
-                    "Q2552993",
-                    "Q581254",
-                    "Q33057",
-                    "Q361",
-                    "Q1259201",
-                    "Q834498",
-                    "Q874784",
-                    "Q162333",
-                    "Q842774",
-                    "Q835649",
-                    "Q570504",
-                    "Q684324",
-                    "Q462964",
-                    "Q2388056",
-                    "Q597533",
-                    "Q720936",
-                    "Q170496",
-                    "Q148505",
-                    "Q11713274",
-                    "Q1044829",
-                    "Q3625471",
-                    "Q289511",
-                    "Q1402078",
-                    "Q1567698",
-                    "Q821283",
-                    "Q473670",
-                    "Q3544088",
-                    "Q78994",
-                    "Q306150",
-                    "Q937255",
-                    "Q74298",
-                    "Q2373506",
-                    "Q582613",
-                    "Q362",
-                    "Q353227",
-                    "Q2065144",
-                    "Q179250",
-                    "Q1207310",
-                    "Q4501692",
-                    "Q211371",
-                    "Q2065551",
-                    "Q2667645",
-                    "Q617281",
-                    "Q186284",
-                    "Q545449",
-                    "Q160928",
-                    "Q199569",
-                    "Q2066991",
-                    "Q158677",
-                    "Q454304",
-                    "Q838931",
-                    "Q33570",
-                    "Q2487",
-                    "Q974251",
-                    "Q2521878",
-                    "Q7969327",
-                    "Q14635000",
-                    "Q211274",
-                    "Q897466",
-                    "Q701627",
-                    "Q200855",
-                    "Q39193",
-                    "Q4122600",
-                    "Q201615",
-                    "Q5202287",
-                    "Q3016850",
-                    "Q2628423",
-                    "Q839234",
-                    "Q897720",
-                    "Q175211",
-                    "Q937332",
-                    "Q1352215",
-                    "Q1645044",
-                    "Q118335",
-                    "Q149234",
-                    "Q654006",
-                    "Q32832",
-                    "Q150812",
-                    "Q4871609",
-                    "Q849176",
-                    "Q2667608",
-                    "Q11710528",
-                    "Q700842",
-                    "Q558423",
-                    "Q719515",
-                    "Q700264",
-                    "Q924600",
-                    "Q1933729",
-                    "Q182865",
-                    "Q977282",
-                    "Q7210108",
-                    "Q160161",
-                    "Q1495944",
-                    "Q2545349",
-                    "Q151616",
-                    "Q2560470",
-                    "Q687151",
-                    "Q260260",
-                    "Q107802",
-                    "Q153080",
-                    "Q157802",
-                    "Q7049",
-                    "Q5124786",
-                    "Q15214996",
-                    "Q158281",
-                    "Q23784",
-                    "Q23647",
-                    "Q148499",
-                ],
+                [node for node in self.view_model.network if "__" in node],
+                [node for node in self.view_model.network if "__" not in node],
             )
             print("got the network")
 
@@ -307,30 +56,22 @@ class View:
 
             layout = degree_bipartite_layout(G, left_nodes, right_nodes)
             graph_renderer = from_networkx(G, layout, scale=1, center=(0, 0))
+            breakpoint()
 
-            graph_renderer.node_renderer.data_source.data[
-                "name"
-            ] = self.view_model.get_nodes_names()
-            graph_renderer.node_renderer.data_source.data[
-                "fragment"
-            ] = self.view_model.get_nodes_fragments()
+            graph_renderer.node_renderer.data_source.data["name"] = self.view_model.get_nodes_names()
+            graph_renderer.node_renderer.data_source.data["fragment"] = self.view_model.get_nodes_fragments()
 
-            left_nodes_list = list(left_nodes)
-            left_colors = [
-                "#%06x" % random.randint(0, 0xFFFFFF) for n in left_nodes_list
-            ]
+            left_colors = ["#%06x" % random.randint(0, 0xFFFFFF) for n in left_nodes]
             colors = [
                 Spectral4[1]
                 if n not in left_nodes
-                else left_colors[left_nodes_list.index(n)]
+                else left_colors[left_nodes.index(n)]
                 for n in G
             ]
             graph_renderer.node_renderer.data_source.data["color"] = colors
 
             max_right_degree = max([G.degree(r) for r in right_nodes])
-            alpha = [
-                0.5 if n in left_nodes else G.degree(n) / max_right_degree for n in G
-            ]
+            alpha = [0.5 if n in left_nodes else G.degree(n) / max_right_degree for n in G]
             graph_renderer.node_renderer.data_source.data["alpha"] = alpha
 
             graph_renderer.node_renderer.glyph = Circle(
@@ -341,6 +82,7 @@ class View:
                 line_width=1,
                 line_alpha=1,
             )
+
             graph_renderer.node_renderer.selection_glyph = Circle(
                 size=15,
                 fill_color="color",
@@ -349,6 +91,7 @@ class View:
                 line_width=5,
                 line_alpha=0.5,
             )
+
             graph_renderer.node_renderer.hover_glyph = Circle(
                 size=15,
                 fill_color="color",
@@ -357,6 +100,7 @@ class View:
                 line_width=3,
                 line_alpha=0.8,
             )
+
             graph_renderer.node_renderer.glyph.properties_with_values()
 
             edges_colors = [colors[list(G).index(e[0])] for e in G.edges()]
@@ -421,17 +165,22 @@ class View:
             )
 
             def update_link(attr, old, new):
+                doc.clear()
+                self.modify_doc(doc)
+
                 if self.view_model.is_existing(new):
                     print("YAY!")
                     self.input_error_message = None
-                    self.view_model.update_link(new)
+                    self.view_model.link = new
+                    curdoc().add_next_tick_callback(self.view_model.update_link)
+
+                    # self.view_model.update_link(new)
                 else:
                     print("boooo....")
                     self.input_error_message = "Link %s not found." % old
-                    self.view_model.update_link(None)
-                doc.clear()
-                # print(list(self.view_model.model.network)[5:])
-                self.modify_doc(doc)
+                    self.view_model.link = None
+                    curdoc().add_next_tick_callback(self.view_model.update_link)
+                    # self.view_model.update_link(None)
 
             text_input.on_change("value", update_link)
             return text_input
@@ -440,9 +189,6 @@ class View:
             return Paragraph(text=text)
 
         def make_language_checkbox():
-            options = self.view_model.available_languages
-            checked = self.view_model.selected_languages
-
             def update_selected(attr, old, new):
                 selection = list()
                 for i in new:
@@ -451,7 +197,9 @@ class View:
                 doc.clear()
                 self.modify_doc(doc)
 
-            active = [] if checked is None else [options.index(c) for c in checked]
+            options = self.view_model.available_languages
+            checked = self.view_model.selected_languages
+            active = [options.index(c) for c in checked]
             checkbox_group = CheckboxGroup(
                 name="languages", labels=options, active=active
             )
