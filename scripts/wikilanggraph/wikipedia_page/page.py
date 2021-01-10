@@ -31,12 +31,18 @@ class Page:
     _instances = {}
 
     def __init__(
-        self: Page, *, language: str, title: str, revision: str = None
+        self: Page,
+        *,
+        language: str,
+        title: str,
+        revision: str = None,
+        timestamp: str = None,
     ) -> None:
         self._aliases: set[str] = set()
         self._title: str = title
         self._language: str = language
-        self._revision = revision
+        self._revision: Optional[str] = revision
+        self._timestamp: Optional[str] = timestamp
         self._wikibase_item: Optional[str] = None
         self._displaytitle: Optional[str] = None
         self._links: PageKeySet[PageKey] = PageKeySet()
@@ -199,6 +205,7 @@ class Page:
             rev_data = data["revisions"]
             self._revisions = RevisionKeys(
                 RevisionKey(
+                    title=self.title,
                     oldid=revision["revid"],
                     language=self.language,
                     timestamp=revision["timestamp"],
@@ -207,6 +214,8 @@ class Page:
             )
         if add_language_to_wikibase_item:
             self._wikibase_item += f"__{self.language}"
+        if self._timestamp:
+            self._wikibase_item += self._timestamp
         if self.wikibase_item is None:
             logger.error("No wikibase: %s, %s", self.title, self.wikibase_item)
 
@@ -275,6 +284,7 @@ class PageKey:
 
 @dataclass(frozen=True, eq=True)
 class RevisionKey:
+    title: str
     oldid: str
     language: str
     timestamp: str
