@@ -176,6 +176,7 @@ class View:
             graph_renderer.inspection_policy = NodesAndLinkedEdges()
 
             plot.renderers.append(graph_renderer)
+            plot.sizing_mode = 'stretch_width'
             print("rendered")
             return plot
 
@@ -304,10 +305,7 @@ class View:
             )
         else:
             print("network was there")
-            self.visualization = make_graph()
-            doc.add_root(
-                row(
-                    column(
+            column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
                         make_static_header("Select from available languages"),
@@ -316,12 +314,17 @@ class View:
                         make_static_header("What kind of analysis is performed?"),
                         make_analysis_mode_radio(),
                         margin=(10, 10, 10, 10),
-                    ),
-                    column(
+                    )
+            column2 = column(
                         make_static_header("Most different versions: "),
                         make_static_header("Difference is: "),
                         make_graph(),
                         margin=(10, 10, 10, 10),
-                    ),
+                    )
+            column2.sizing_mode = 'stretch_width'
+            doc.add_root(
+                row(
+                    column1,
+                    column2,
                 )
             )
