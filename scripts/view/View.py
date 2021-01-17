@@ -100,6 +100,17 @@ class View:
             ]
             self.edge_renderer_data_source["alpha"] = edges_alphas
 
+        def prepare_plot(width=1000, height=600, vertical_margin=10):
+            plot = Plot(
+                plot_width=width,
+                plot_height=height,
+                x_range=Range1d(-1.1, 1.1),
+                y_range=Range1d(-0.5 - vertical_margin, 0.5 + vertical_margin),
+            )
+            plot.title.text = "Visualization of article versions and internal links"
+            plot.sizing_mode = 'stretch_width'
+            return plot
+
         def make_graph():
             print("star drawing")
             G, left_nodes, right_nodes = get_network_data()
@@ -111,13 +122,7 @@ class View:
             height = 15 * len(right_nodes_degree_map[key_largest_right_subset])
             vertical_margin = 0.05 * width / height
 
-            plot = Plot(
-                plot_width=width,
-                plot_height=height,
-                x_range=Range1d(-1.1, 1.1),
-                y_range=Range1d(-0.5 - vertical_margin, 0.5 + vertical_margin),
-            )
-            plot.title.text = "Visualization of article versions and internal links"
+            plot = prepare_plot(width=width, height=height, vertical_margin=vertical_margin)
 
             plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
 
@@ -176,7 +181,6 @@ class View:
             graph_renderer.inspection_policy = NodesAndLinkedEdges()
 
             plot.renderers.append(graph_renderer)
-            plot.sizing_mode = 'stretch_width'
             print("rendered")
             return plot
 
@@ -282,25 +286,43 @@ class View:
 
         if self.input_error_message is not None:
             print("there was error")
-            doc.add_root(
-                row(
-                    column(
+            column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
                         make_error_text(),
                         margin=(10, 10, 10, 10),
                     )
+            column2 = column(
+                        make_static_header("Most different versions: "),
+                        make_static_header("Difference is: "),
+                        prepare_plot(),
+                        margin=(10, 10, 10, 10),
+                    )
+            column2.sizing_mode = 'stretch_width'
+            doc.add_root(
+                row(
+                    column1,
+                    column2
                 )
             )
         elif self.input_error_message is None and self.view_model.network is None:
             print("network was none")
-            doc.add_root(
-                row(
-                    column(
+            column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
                         margin=(10, 10, 10, 10),
                     )
+            column2 = column(
+                        make_static_header("Most different versions: "),
+                        make_static_header("Difference is: "),
+                        prepare_plot(),
+                        margin=(10, 10, 10, 10),
+                    )
+            column2.sizing_mode = 'stretch_width'
+            doc.add_root(
+                row(
+                    column1,
+                    column2
                 )
             )
         else:
