@@ -27,7 +27,7 @@ async def main() -> int:
     article_language = "pl"
 
     graph: nx.Graph = initialize_graph()
-    starting_page = initialize_starting_page(
+    starting_page: Page = initialize_starting_page(
         language=article_language, title=article_name
     )
     graph = await generate_lang_graph(
@@ -52,14 +52,10 @@ async def main() -> int:
         revision=temp_timestamp.oldid,
         timestamp=temp_timestamp.timestamp,
     )
+    logging.debug("Backlinks: %s", starting_page._back)
     temp_graph = await generate_lang_graph(
         graph=temp_graph, starting_page=page, languages=languages
     )
-
-    logging.info("Graph: \n %s", nx.info(graph))
-    logging.info("Metrics: \n %s", metrics.to_string())
-    logging.info("Timestamps: %s", timestamps)
-
     return 0
 
 

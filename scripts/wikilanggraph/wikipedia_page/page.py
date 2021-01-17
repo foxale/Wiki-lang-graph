@@ -47,6 +47,8 @@ class Page:
         self._timestamp: Optional[str] = timestamp
         self._wikibase_item: Optional[str] = None
         self._displaytitle: Optional[str] = None
+        self._description: Optional[str] = None
+        self._backlinks: PageKeySet[PageKey] = PageKeySet()
         self._links: PageKeySet[PageKey] = PageKeySet()
         self._langlinks: PageKeySet[PageKey] = PageKeySet()
         self._fetched: bool = False
@@ -59,6 +61,7 @@ class Page:
             "_language": "language",
             "_displaytitle": "title",
             "_timestamp": "timestamp",
+            "_description": "description",
         }
         return {
             attribute_mapping[k]: v
@@ -230,6 +233,21 @@ class Page:
                 )
                 for revision in rev_data
             )
+        try:
+            self._description = data["terms"]["description"]
+            print("description:", data["terms"]["description"])
+        except KeyError:
+            self._description = self._displaytitle
+        with suppress(KeyError):
+            backlinks_data = data["linkshere"]
+            print("backlinks:", data["linkshere"])
+            self._revisions = PageKeySet(
+                PageKey(
+                    title=backlink['title'],
+                    language=self.language,
+                )
+                for backlink in backlinks_data
+            )
         if add_language_to_wikibase_item:
             self._wikibase_item += f"__{self.language}"
         if self._timestamp:
@@ -259,12 +277,23 @@ class Page:
         }
         if links:
             params["prop"] += "|links"
-            params["pllimit"] = ("max",)
+            params["pllimit"] = "max"
 
         if revisions:
             params["prop"] += "|revisions"
             params["rvlimit"] = "max"
             params["rvprop"] = "ids|flags|timestamp|roles|flagged"
+
+        description = revisions
+        if description:
+            params["prop"] += "|pageterms"
+            params["wbptterms"] = "description"
+
+        backlinks = revisions
+        if backlinks:
+            params["prop"] += "|linkshere"
+            params["lhlimit"] = "max"
+            params["blredirect"] = True
 
         if type_ == "query":
             params["titles"] = (self.title,)
