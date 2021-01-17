@@ -44,9 +44,8 @@ class Model:
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
-    async def get_article_timestamp(self, article_name: str, moment_in_time: str):
+    async def get_article_timestamp(self, article_name: str, moment_in_time: str, article_language='en'):
         async with httpx.AsyncClient() as client:
-            article_language = "pl"
             graph = initialize_graph()
             starting_page = initialize_starting_page(
                 language=article_language, title=article_name
@@ -75,9 +74,7 @@ class Model:
 
         self.network = graph
 
-    async def get_article_data(self, article_name: str):
-        article_language = "pl"
-
+    async def get_article_data(self, article_name: str, article_language='en'):
         graph = initialize_graph()
         starting_page = initialize_starting_page(
             language=article_language, title=article_name
