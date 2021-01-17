@@ -206,10 +206,11 @@ class View:
             )
 
             def update_timeline_value(attr, old, new):
-                new_value = self.view_model.timeline_values[new]
-                self.view_model.update_timeline_value(new_value)
-                header.text = "Select moment in time: %s" % new_value
                 doc.clear()
+                new_value = self.view_model.timeline_values[new]
+                self.view_model.selected_timeline_value = new_value
+                curdoc().add_next_tick_callback(self.view_model.update_timeline_value)
+                header.text = "Select moment in time: %s" % new_value
                 self.modify_doc(doc)
 
             slider.on_change("value", update_timeline_value)
@@ -338,8 +339,8 @@ class View:
                         margin=(10, 10, 10, 10),
                     )
             column2 = column(
-                        make_static_header("Most different versions: "),
-                        make_static_header("Difference is: "),
+                        make_static_header("Most different versions: %s %s" % self.view_model.max_metric[0]),
+                        make_static_header("Difference is: %f" % self.view_model.max_metric[1]),
                         make_graph(),
                         margin=(10, 10, 10, 10),
                     )

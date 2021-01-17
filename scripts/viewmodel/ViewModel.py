@@ -24,6 +24,7 @@ class ViewModel:
             "Article analysis (no backlinks)",
             "Network analysis (with backlinks)",
         ]
+        self.max_metric = None
 
     async def update_link(self):
         logging.debug("Update link")
@@ -33,7 +34,9 @@ class ViewModel:
         self.colors = ["#%06x" % random.randint(0, 0xFFFFFF) for node in self.left_nodes]
         self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
         self.selected_languages = self.available_languages
-        self.timeline_values = ["2019-01-01", "2020-12-31"]
+        metrics = self.model.metrics.sort_values(ascending=False)
+        self.max_metric = [metrics.index[0], metrics[0]]
+        self.timeline_values = [t.timestamp for t in self.model.timestamps]
         self.selected_timeline_value = self.timeline_values[0]
 
     def is_existing(self, link):
@@ -42,6 +45,7 @@ class ViewModel:
     def update_selected_languages(self, selected):
         print("selected languages:", selected)
         self.selected_languages = selected
+        self._find_metrics_by_languages()
         # update network
 
     def update_analysis_mode(self, selected):
@@ -49,10 +53,11 @@ class ViewModel:
         print(selected)
         # update network
 
-    def update_timeline_value(self, selected):
-        print(selected)
-        self.selected_timeline_value = selected
-        #         update network
+    async def update_timeline_value(self):
+        print(self.selected_timeline_value)
+        await self.model.get_article_data(title="Bitwa pod Cedynią", moment_in_time=self.selected_timeline_value)
+        self._update_network()
+        self._find_metrics_by_languages()
 
     def _update_network(self):
         self.network = self.model.network
@@ -60,3 +65,15 @@ class ViewModel:
             [node for node in self.network if "__" in node],
             [node for node in self.network if "__" not in node],
         )
+
+    def _find_metrics_by_languages(self):
+        metrics = self.model.metrics
+        filtered_by_visible_languages = metrics[
+            metrics.index.get_level_values('lang_1').isin(self.selected_languages)
+            & metrics.index.get_level_values('lang_2').isin(self.selected_languages)
+            ].sort_values(ascending=False)
+
+        self.max_metric = \
+            [filtered_by_visible_languages.index[0], filtered_by_visible_languages[0]] \
+            if len(filtered_by_visible_languages) > 0 \
+            else [("", ""), 0]
