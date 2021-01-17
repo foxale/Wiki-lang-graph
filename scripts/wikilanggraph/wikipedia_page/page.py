@@ -241,7 +241,7 @@ class Page:
         with suppress(KeyError):
             backlinks_data = data["linkshere"]
             print("backlinks:", data["linkshere"])
-            self._revisions = PageKeySet(
+            self._backlinks = PageKeySet(
                 PageKey(
                     title=backlink['title'],
                     language=self.language,
