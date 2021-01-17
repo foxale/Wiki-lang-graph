@@ -64,7 +64,7 @@ async def fetch_pages_links(client: httpx.AsyncClient, page: Page) -> None:
 
 
 async def generate_lang_graph(
-    graph: nx.Graph, starting_page: Page, languages: Iterable[str]
+    graph: nx.Graph, starting_page: Page, languages: Optional[Iterable[str]]
 ) -> nx.Graph:
 
     async with httpx.AsyncClient() as client:

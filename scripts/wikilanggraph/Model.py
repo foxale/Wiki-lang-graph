@@ -23,33 +23,26 @@ class Model:
     """
 
     async def get_article_data(self, title, moment_in_time=None):
-        languages = ("pl", "en", "de", "fr", "cz")
+        languages = None
         article_name = "Bitwa pod Cedynią"
         article_language = "pl"
 
-        graph: nx.Graph = initialize_graph()
-        starting_page: Page = initialize_starting_page(
+        graph = initialize_graph()
+        starting_page = initialize_starting_page(
             language=article_language, title=article_name
         )
         graph = await generate_lang_graph(
             graph=graph, starting_page=starting_page, languages=languages
         )
-        graph: nx.Graph = await generate_lang_graph(
-            graph=graph, starting_page=starting_page, languages=languages
-        )
-        metrics = calculate_dissimilarity_metrics(graph=graph)
-        timestamps = starting_page.timepoints_all_languages
+        self.metrics = calculate_dissimilarity_metrics(graph=graph)
+        self.timestamps = starting_page.timepoints_all_languages
+        self.network = graph
 
         logging.info("Graph: \n %s", nx.info(graph))
-        logging.info("Metrics: \n %s", metrics.to_string())
-        logging.info("Timestamps: %s", timestamps)
+        logging.info("Metrics: \n %s", self.metrics.to_string())
+        logging.info("Timestamps: %s", self.timestamps)
 
-        metrics = calculate_dissimilarity_metrics(graph=graph)
-        timestamps = starting_page.timepoints_all_languages
-        self.metrics = metrics
-        self.timestamps = timestamps
-
-        temp_timestamp: RevisionKey = timestamps[0]
+        temp_timestamp = self.timestamps[0]
         temp_graph = initialize_graph()
         page = Page(
             language=temp_timestamp.language,
@@ -61,5 +54,4 @@ class Model:
         temp_graph = await generate_lang_graph(
             graph=temp_graph, starting_page=page, languages=languages
         )
-        self.network = temp_graph
 

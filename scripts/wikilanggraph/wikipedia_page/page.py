@@ -9,7 +9,6 @@ from collections import Generator
 from collections import Iterable
 from contextlib import suppress
 from dataclasses import dataclass
-from json import JSONEncoder
 
 import dateutil.parser
 from typing import Any
@@ -197,7 +196,8 @@ class Page:
                 self._valid = False
                 return
         except KeyError:
-            page_number, page_data = data[""]
+            page_number, page_data = "", ""
+            breakpoint()
 
         self._parse_page_data(data=page_data, add_language_to_wikibase_item=make_unique)
         self._add_aliases_to_class_instances()

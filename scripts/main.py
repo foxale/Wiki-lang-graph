@@ -22,7 +22,8 @@ from scripts.wikilanggraph.Model import Model
 
 
 async def main() -> int:
-    languages = ("pl", "en", "de", "fr", "cz")
+    # languages = ("pl", "en", "de", "fr", "cz")
+    languages = None
     article_name = "Bitwa pod Cedynią"
     article_language = "pl"
 
@@ -33,17 +34,13 @@ async def main() -> int:
     graph = await generate_lang_graph(
         graph=graph, starting_page=starting_page, languages=languages
     )
-    graph: nx.Graph = await generate_lang_graph(
-        graph=graph, starting_page=starting_page, languages=languages
-    )
     metrics = calculate_dissimilarity_metrics(graph=graph)
     timestamps = starting_page.timepoints_all_languages
 
     logging.info("Graph: \n %s", nx.info(graph))
     logging.info("Metrics: \n %s", metrics.to_string())
     logging.info("Timestamps: %s", timestamps)
-    metrics = calculate_dissimilarity_metrics(graph=graph)
-    timestamps = starting_page.timepoints_all_languages
+
     temp_timestamp: RevisionKey = timestamps[0]
     temp_graph = initialize_graph()
     page = Page(
