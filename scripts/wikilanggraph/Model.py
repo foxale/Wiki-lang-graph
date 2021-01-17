@@ -1,15 +1,18 @@
 import networkx as nx
+import logging
 
-from scripts.wikilanggraph import generate_lang_graph
+from scripts.wikilanggraph import generate_lang_graph, calculate_dissimilarity_metrics
 from scripts.wikilanggraph import initialize_graph
 from scripts.wikilanggraph import initialize_starting_page
+from scripts.wikilanggraph.wikipedia_page import RevisionKey, Page
 
 
 class Model:
     def __init__(self):
         self.network = None
+        self.metrics = None
         self.df = None
-        self.time = None
+        self.timestamps = None
 
     """
     this method should return:
@@ -24,19 +27,33 @@ class Model:
         article_language = "pl"
 
         graph: nx.Graph = initialize_graph()
-        starting_page = initialize_starting_page(language=article_language, title=title)
+        starting_page = initialize_starting_page(
+            language=article_language, title="Bitwa pod Cedynią"
+        )
         graph = await generate_lang_graph(
             graph=graph, starting_page=starting_page, languages=languages
         )
-        self.network = graph
-        # here a data frame and list of moments in time should be prepared
 
-        # asyncio.set_event_loop(asyncio.new_event_loop())
-        # return asyncio.gather(get_info("lol", "xd"))
-        # executor = ThreadPoolExecutor()
+        metrics = calculate_dissimilarity_metrics(graph=graph)
+        timestamps = starting_page.timepoints_all_languages
+        self.metrics = metrics
+        self.timestamps = timestamps
 
-        # result = yield from loop.run_in_executor(executor=None, func=lambda: get_info("lol", "xd"))
-        # return executor.submit(lambda: get_info("lol", "xd")).result()
-        # IOLoop.current().spawn_callback(callback=lambda: get_info("lol", "xd"))
-        # return self.network, self.df, self.time
-        # return loop.run_until_complete(get_inf())
+        logging.info("Graph: \n %s", nx.info(graph))
+        logging.info("Metrics: \n %s", metrics.to_string())
+        logging.info("Timestamps: %s", timestamps)
+
+        temp_timestamp: RevisionKey = timestamps[0]
+        temp_graph = initialize_graph()
+        page = Page(
+            language=temp_timestamp.language,
+            title=temp_timestamp.title,
+            revision=temp_timestamp.oldid,
+            timestamp=temp_timestamp.timestamp,
+        )
+        temp_graph = await generate_lang_graph(
+            graph=temp_graph, starting_page=page, languages=languages
+        )
+
+        self.network = temp_graph
+
