@@ -24,24 +24,30 @@ class Model:
 
     async def get_article_data(self, title, moment_in_time=None):
         languages = ("pl", "en", "de", "fr", "cz")
+        article_name = "Bitwa pod Cedynią"
         article_language = "pl"
 
         graph: nx.Graph = initialize_graph()
-        starting_page = initialize_starting_page(
-            language=article_language, title="Bitwa pod Cedynią"
+        starting_page: Page = initialize_starting_page(
+            language=article_language, title=article_name
         )
         graph = await generate_lang_graph(
             graph=graph, starting_page=starting_page, languages=languages
         )
+        graph: nx.Graph = await generate_lang_graph(
+            graph=graph, starting_page=starting_page, languages=languages
+        )
+        metrics = calculate_dissimilarity_metrics(graph=graph)
+        timestamps = starting_page.timepoints_all_languages
+
+        logging.info("Graph: \n %s", nx.info(graph))
+        logging.info("Metrics: \n %s", metrics.to_string())
+        logging.info("Timestamps: %s", timestamps)
 
         metrics = calculate_dissimilarity_metrics(graph=graph)
         timestamps = starting_page.timepoints_all_languages
         self.metrics = metrics
         self.timestamps = timestamps
-
-        logging.info("Graph: \n %s", nx.info(graph))
-        logging.info("Metrics: \n %s", metrics.to_string())
-        logging.info("Timestamps: %s", timestamps)
 
         temp_timestamp: RevisionKey = timestamps[0]
         temp_graph = initialize_graph()
@@ -51,9 +57,9 @@ class Model:
             revision=temp_timestamp.oldid,
             timestamp=temp_timestamp.timestamp,
         )
+        logging.debug("Backlinks: %s", starting_page._backlinks)
         temp_graph = await generate_lang_graph(
             graph=temp_graph, starting_page=page, languages=languages
         )
-
         self.network = temp_graph
 
