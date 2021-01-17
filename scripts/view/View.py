@@ -17,7 +17,7 @@ from bokeh.models import (
     Slider,
     TextInput,
     CheckboxGroup,
-    RadioGroup,
+    RadioGroup, ColumnDataSource,
 )
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
@@ -29,27 +29,87 @@ class View:
     def __init__(self, view_model):
         self.view_model = view_model
         self.input_error_message = None
+        self.node_renderer_data_source = {}
+        self.edge_renderer_data_source = {}
         self.visualization = None
 
     @without_document_lock
     def modify_doc(self, doc):
-        def make_graph():
-            print("star drawing")
+        def get_network_data():
             G, left_nodes, right_nodes = (
                 self.view_model.network,
-                [node for node in self.view_model.network if "__" in node],
-                [node for node in self.view_model.network if "__" not in node],
+                self.view_model.left_nodes,
+                self.view_model.right_nodes,
             )
             print("got the network")
+            return G, left_nodes, right_nodes
+
+        def determine_nodes_visibility(G, left_nodes, right_nodes):
+            languages_indices = [self.view_model.available_languages.index(lang) for lang in
+                                 self.view_model.selected_languages]
+            visible_left_nodes = [left_nodes[i] for i in languages_indices]
+            visible_right_nodes = []
+            for e in G.edges:
+                if e[0] in visible_left_nodes:
+                    visible_right_nodes.append(e[1])
+
+            visibility = [
+                True
+                if (n in visible_right_nodes or n in visible_left_nodes)
+                else False
+                for n in list(G)
+            ]
+            return visibility
+
+        def init_visualization_data(G, left_nodes, right_nodes, original_nodes_data):
+            self.node_renderer_data_source["index"] = original_nodes_data["index"]
+            self.node_renderer_data_source["page"] = original_nodes_data["page"]
+            self.node_renderer_data_source["name"] = [p["title"] for p in original_nodes_data["page"]]
+            self.node_renderer_data_source["fragment"] = self.view_model.get_nodes_fragments()
+
+            left_colors = self.view_model.colors
+            colors = [
+                Spectral4[1]
+                if n not in left_nodes
+                else left_colors[left_nodes.index(n)]
+                for n in G
+            ]
+            self.node_renderer_data_source["color"] = colors
+
+            self.node_renderer_data_source["visibility"] = determine_nodes_visibility(G=G, left_nodes=left_nodes,
+                                                                                      right_nodes=right_nodes)
+
+            max_right_degree = max([G.degree(r) for r in right_nodes])
+            alpha = [
+                0 if self.node_renderer_data_source["visibility"][list(G).index(n)] is False
+                else 0.5 if n in left_nodes
+                else G.degree(n) / max_right_degree for n in G
+            ]
+            self.node_renderer_data_source["alpha"] = alpha
+
+            self.edge_renderer_data_source["start"] = [e[0] for e in G.edges()]
+            self.edge_renderer_data_source["end"] = [e[1] for e in G.edges()]
+            edges_colors = [colors[list(G).index(e[0])] for e in G.edges()]
+            self.edge_renderer_data_source["color"] = edges_colors
+
+            edges_visibility = [self.node_renderer_data_source["visibility"][list(G).index(e[0])] for e in G.edges()]
+            edges_alphas = [
+                0 if edges_visibility[list(G.edges).index(e)] is False
+                else 0.5
+                for e in G.edges
+            ]
+            self.edge_renderer_data_source["alpha"] = edges_alphas
+
+        def make_graph():
+            print("star drawing")
+            G, left_nodes, right_nodes = get_network_data()
 
             width = 1000
-
             right_nodes_degree_map = get_degree_map(G, subset=right_nodes)
-            print(right_nodes_degree_map)
+
             key_largest_right_subset = max(right_nodes_degree_map, key=lambda deg: len(right_nodes_degree_map[deg]))
-            # print(len(largest_right_subset))
             height = 15 * len(right_nodes_degree_map[key_largest_right_subset])
-            vertical_margin = 0.05 * width/height
+            vertical_margin = 0.05 * width / height
 
             plot = Plot(
                 plot_width=width,
@@ -57,28 +117,16 @@ class View:
                 x_range=Range1d(-1.1, 1.1),
                 y_range=Range1d(-0.5 - vertical_margin, 0.5 + vertical_margin),
             )
-            plot.title.text = "Visualization of article versions and links"
+            plot.title.text = "Visualization of article versions and internal links"
 
             plot.add_tools(HoverTool(tooltips=None), TapTool(), BoxSelectTool())
 
             layout = degree_bipartite_layout(G, left_nodes, right_nodes)
             graph_renderer = from_networkx(G, layout, scale=1, center=(0, 0))
+            init_visualization_data(G=G, left_nodes=left_nodes, right_nodes=right_nodes,
+                                    original_nodes_data=graph_renderer.node_renderer.data_source.data)
 
-            graph_renderer.node_renderer.data_source.data["name"] = self.view_model.get_nodes_names()
-            graph_renderer.node_renderer.data_source.data["fragment"] = self.view_model.get_nodes_fragments()
-
-            left_colors = ["#%06x" % random.randint(0, 0xFFFFFF) for n in left_nodes]
-            colors = [
-                Spectral4[1]
-                if n not in left_nodes
-                else left_colors[left_nodes.index(n)]
-                for n in G
-            ]
-            graph_renderer.node_renderer.data_source.data["color"] = colors
-
-            max_right_degree = max([G.degree(r) for r in right_nodes])
-            alpha = [0.5 if n in left_nodes else G.degree(n) / max_right_degree for n in G]
-            graph_renderer.node_renderer.data_source.data["alpha"] = alpha
+            graph_renderer.node_renderer.data_source.data = self.node_renderer_data_source
 
             graph_renderer.node_renderer.glyph = Circle(
                 size=12,
@@ -86,7 +134,7 @@ class View:
                 fill_alpha="alpha",
                 line_color="color",
                 line_width=1,
-                line_alpha=1,
+                line_alpha="alpha",
             )
 
             graph_renderer.node_renderer.selection_glyph = Circle(
@@ -95,7 +143,7 @@ class View:
                 fill_alpha="alpha",
                 line_color="color",
                 line_width=5,
-                line_alpha=0.5,
+                line_alpha="alpha",
             )
 
             graph_renderer.node_renderer.hover_glyph = Circle(
@@ -104,21 +152,19 @@ class View:
                 fill_alpha="alpha",
                 line_color="color",
                 line_width=3,
-                line_alpha=0.8,
+                line_alpha="alpha",
             )
 
+            graph_renderer.edge_renderer.data_source.data = self.edge_renderer_data_source
             graph_renderer.node_renderer.glyph.properties_with_values()
-
-            edges_colors = [colors[list(G).index(e[0])] for e in G.edges()]
-            graph_renderer.edge_renderer.data_source.data["color"] = edges_colors
             graph_renderer.edge_renderer.glyph = MultiLine(
-                line_color="color", line_alpha=0.5, line_width=2
+                line_color="color", line_alpha="alpha", line_width=2
             )
             graph_renderer.edge_renderer.selection_glyph = MultiLine(
-                line_color="color", line_alpha=1, line_width=5
+                line_color="color", line_alpha="alpha", line_width=5
             )
             graph_renderer.edge_renderer.hover_glyph = MultiLine(
-                line_color="color", line_alpha=0.8, line_width=3
+                line_color="color", line_alpha="alpha", line_width=3
             )
 
             hover = HoverTool(
@@ -172,8 +218,8 @@ class View:
 
             def update_link(attr, old, new):
                 doc.clear()
-                
-                async def proceed_update(new):
+
+                async def proceed_update():
                     await self.view_model.update_link()
                     self.modify_doc(doc)
 
@@ -181,7 +227,7 @@ class View:
                     print("YAY!")
                     self.input_error_message = None
                     self.view_model.link = new
-                    curdoc().add_next_tick_callback(lambda: proceed_update(new))
+                    curdoc().add_next_tick_callback(proceed_update)
                 else:
                     print("boooo....")
                     self.input_error_message = "Link %s not found." % old
@@ -196,11 +242,11 @@ class View:
 
         def make_language_checkbox():
             def update_selected(attr, old, new):
+                doc.clear()
                 selection = list()
                 for i in new:
-                    selection.append(i)
+                    selection.append(self.view_model.available_languages[i])
                 self.view_model.update_selected_languages(selection)
-                doc.clear()
                 self.modify_doc(doc)
 
             options = self.view_model.available_languages
