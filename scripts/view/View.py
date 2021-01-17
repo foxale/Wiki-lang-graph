@@ -65,7 +65,7 @@ class View:
             self.node_renderer_data_source["index"] = original_nodes_data["index"]
             self.node_renderer_data_source["page"] = original_nodes_data["page"]
             self.node_renderer_data_source["name"] = [p["title"] for p in original_nodes_data["page"]]
-            self.node_renderer_data_source["fragment"] = self.view_model.get_nodes_fragments()
+            self.node_renderer_data_source["fragment"] = ["fragment %s" % node for node in list(G)]
 
             left_colors = self.view_model.colors
             colors = [
