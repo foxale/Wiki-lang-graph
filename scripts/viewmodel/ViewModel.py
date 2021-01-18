@@ -46,10 +46,6 @@ class ViewModel:
         self.timeline_values = [t.timestamp for t in self.model.timestamps]
         self.selected_timeline_value = self.timeline_values[0]
 
-    async def check_article_exists(self):
-        article_name, language = self._parse_article_name()
-        return self.model.is_page_exising(article_name=article_name, article_language=language)
-
     def update_selected_languages(self, selected):
         logging.debug("selected languages:", selected)
         self.selected_languages = selected
