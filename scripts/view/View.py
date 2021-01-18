@@ -234,12 +234,12 @@ class View:
 
                 async def proceed_update():
                     self.view_model.article = new
-                    exists = await self.view_model.check_article_exists()
-                    if exists:
+                    try:
                         self.input_error_message = None
                         await self.view_model.update_article()
-                    else:
-                        self.input_error_message = "Article %s not found." % old
+                    except Exception as e:
+                        self.input_error_message = str(e)
+                        self.view_model.network = None
                         self.view_model.article = None
                     doc.clear()
                     self.modify_doc(doc)
