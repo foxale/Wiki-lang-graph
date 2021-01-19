@@ -1,6 +1,7 @@
 import logging
 import random
 
+import networkx as nx
 from bokeh.document import without_document_lock
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
@@ -41,15 +42,6 @@ class View:
             loading_text.sizing_mode = 'stretch_both'
             screen = loading_text
             doc.add_root(screen)
-
-        def get_network_data():
-            G, left_nodes, right_nodes = (
-                self.view_model.network,
-                self.view_model.left_nodes,
-                self.view_model.right_nodes,
-            )
-            print("got the network")
-            return G, left_nodes, right_nodes
 
         def determine_nodes_visibility(G, left_nodes, right_nodes):
             languages_indices = [self.view_model.available_languages.index(lang) for lang in
@@ -96,16 +88,30 @@ class View:
 
             self.edge_renderer_data_source["start"] = [e[0] for e in G.edges()]
             self.edge_renderer_data_source["end"] = [e[1] for e in G.edges()]
-            edges_colors = [colors[list(G).index(e[0])] for e in G.edges()]
+            edges_colors = determine_edges_colors(G, left_nodes, colors)
             self.edge_renderer_data_source["color"] = edges_colors
 
-            edges_visibility = [self.node_renderer_data_source["visibility"][list(G).index(e[0])] for e in G.edges()]
+            edges_visibility = determine_edges_visibility(G, left_nodes, self.node_renderer_data_source["visibility"])
             edges_alphas = [
                 0 if edges_visibility[list(G.edges).index(e)] is False
                 else 0.5
                 for e in G.edges
             ]
             self.edge_renderer_data_source["alpha"] = edges_alphas
+
+        def determine_edges_visibility(G: nx.Graph, left_nodes: list, nodes_visibility: list):
+            visibility = []
+            for e in G.edges:
+                left_end = e[0] if e[0] in left_nodes else e[1]
+                visibility.append(nodes_visibility[list(G).index(left_end)])
+            return visibility
+
+        def determine_edges_colors(G: nx.Graph, left_nodes: list, colors: list):
+            edges_colors = []
+            for e in G.edges:
+                left_end = e[0] if e[0] in left_nodes else e[1]
+                edges_colors.append(colors[list(G).index(left_end)])
+            return edges_colors
 
         def prepare_plot(width=1000, height=600, vertical_margin=10):
             plot = Plot(
@@ -119,8 +125,10 @@ class View:
             return plot
 
         def make_graph():
-            print("star drawing")
-            G, left_nodes, right_nodes = get_network_data()
+            logging.debug("star drawing")
+            G = self.view_model.network
+            left_nodes = self.view_model.left_nodes
+            right_nodes = self.view_model.right_nodes
 
             width = 1000
             height = 10 * len(right_nodes)
@@ -185,7 +193,7 @@ class View:
             graph_renderer.inspection_policy = NodesAndLinkedEdges()
 
             plot.renderers.append(graph_renderer)
-            print("rendered")
+            logging.debug("network rendered")
             return plot
 
         def make_timeline_slider():
@@ -212,12 +220,17 @@ class View:
             def update_timeline_value(attr, old, new):
                 doc.clear()
                 make_loading_screen()
-                new_value = self.view_model.timeline_values[new]
-                self.view_model.selected_timeline_value = new_value
-                self.view_model.update_timeline_value()
-                header.text = "Select moment in time: %s" % new_value
-                doc.clear()
-                self.modify_doc(doc)
+
+                async def proceed_update():
+                    doc.clear()
+                    new_value = self.view_model.timeline_values[new]
+                    self.view_model.selected_timeline_value = new_value
+                    await self.view_model.update_timeline_value()
+                    header.text = "Select moment in time: %s" % new_value
+                    doc.clear()
+                    self.modify_doc(doc)
+
+                curdoc().add_timeout_callback(proceed_update, timeout_milliseconds=0)
 
             slider.on_change("value", update_timeline_value)
             return column(header, slider)
@@ -239,7 +252,7 @@ class View:
                     doc.clear()
                     self.modify_doc(doc)
 
-                curdoc().add_next_tick_callback(proceed_update, timeout_milliseconds=0)
+                curdoc().add_next_tick_callback(proceed_update)
 
             text_input.on_change("value", update_link)
             return text_input
@@ -295,7 +308,7 @@ class View:
             return text_output
 
         if self.input_error_message is not None:
-            print("there was error")
+            logging.info("There was error")
             column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
@@ -316,7 +329,7 @@ class View:
                 )
             )
         elif self.input_error_message is None and self.view_model.network is None:
-            print("network was none")
+            logging.info("current network was None. Display start screen")
             column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
@@ -336,7 +349,7 @@ class View:
                 )
             )
         else:
-            print("network was there")
+            logging.info("Network was present. Proceed to analysis screen.")
             column1 = column(
                         make_static_header("Wiki-lang-graph"),
                         make_text_input(),
