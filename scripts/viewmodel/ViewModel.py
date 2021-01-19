@@ -84,6 +84,7 @@ class ViewModel:
         # selected languages must be updated somehow, to avoid situation
         # where there is less left nodes than selected languages to render plot properly
         self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
+        initially_selected = self.selected_languages
         selected = []
         for lang in self.available_languages:
             for s_lang in self.selected_languages:
@@ -92,6 +93,9 @@ class ViewModel:
         self.selected_languages = selected
 
         self._find_metrics_by_languages()
+
+        self.available_languages = [str(node).split("__")[1][:2] for node in self.left_nodes]
+        self.selected_languages = initially_selected
 
     def _update_network(self):
         self.network = self.model.network
