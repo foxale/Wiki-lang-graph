@@ -207,12 +207,16 @@ class View:
             )
 
             def update_timeline_value(attr, old, new):
-                doc.clear()
-                new_value = self.view_model.timeline_values[new]
-                self.view_model.selected_timeline_value = new_value
-                self.view_model.update_timeline_value()
-                header.text = "Select moment in time: %s" % new_value
-                self.modify_doc(doc)
+
+                async def proceed_update():
+                    doc.clear()
+                    new_value = self.view_model.timeline_values[new]
+                    self.view_model.selected_timeline_value = new_value
+                    await self.view_model.update_timeline_value()
+                    header.text = "Select moment in time: %s" % new_value
+                    self.modify_doc(doc)
+
+                curdoc().add_timeout_callback(proceed_update, timeout_milliseconds=0)
 
             slider.on_change("value", update_timeline_value)
             return column(header, slider)

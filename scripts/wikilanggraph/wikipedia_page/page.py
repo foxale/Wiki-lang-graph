@@ -53,7 +53,7 @@ class Page:
         self._links: PageKeySet[PageKey] = PageKeySet()
         self._langlinks: PageKeySet[PageKey] = PageKeySet()
         self._fetched: bool = False
-        self._valid: bool = True
+        self._valid: bool = False
         self._revisions: RevisionKeys[RevisionKey] = RevisionKeys()
 
     def to_serializable(self):
@@ -214,8 +214,8 @@ class Page:
                     logger.warning(
                         'Linked page "%s" does not exist and will be removed', self.title
                     )
-                    self._valid = False
                     return
+                self._valid = True
             except KeyError as e:
                 page_data = None
                 logger.exception(e)
@@ -232,11 +232,21 @@ class Page:
         self: Page, data: dict[str, Any], add_language_to_wikibase_item: bool = False
     ) -> None:
         self._displaytitle = data["displaytitle"]
-        with suppress(KeyError):
-            self._links = PageKeySet(
-                PageKey(language=self._language, title=link["title"])
-                for link in data["links"]
-            )
+        try:
+            links = data["links"]
+        except KeyError:
+            pass
+        else:
+            try:
+                self._links = PageKeySet(
+                    PageKey(language=self._language, title=link["title"])
+                    for link in links
+                )
+            except KeyError:
+                self._links = PageKeySet(
+                    PageKey(language=self._language, title=link["*"])
+                    for link in links
+                )
         with suppress(KeyError):
             self._langlinks = PageKeySet(
                 PageKey(language=langlink["lang"], title=langlink["*"])

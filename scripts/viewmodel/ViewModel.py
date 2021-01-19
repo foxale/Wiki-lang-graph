@@ -1,5 +1,6 @@
 import logging
 import random
+import time
 
 right_node_count = 50
 left_node_count = 3
@@ -51,23 +52,19 @@ class ViewModel:
         print(selected)
         # update network
 
-    def update_timeline_value(self):
-        self.model.get_article_timestamp(
+    async def update_timeline_value(self):
+        await self.model.get_article_timestamp(
             article_name="Bitwa pod Cedynią",
             moment_in_time=self.selected_timeline_value
         )
-        logging.info("Here %s", self.network)
-        logging.info("There %s", self.model.network)
 
         self._update_network()
         self._find_metrics_by_languages()
 
     def _update_network(self):
         self.network = self.model.network
-        self.left_nodes, self.right_nodes = (
-            [node for node in self.network if "__" in node],
-            [node for node in self.network if "__" not in node],
-        )
+        self.left_nodes = [node for node in self.network if "__" in node]
+        self.right_nodes = [node for node in self.network if "__" not in node]
 
     def _find_metrics_by_languages(self):
         metrics = self.model.metrics
