@@ -41,7 +41,7 @@ async def fetch_starting_page_langlinks(
     logging.info('Fetched starting page langlinks "%s"', set(page.langlinks))
 
 
-def add_starting_page_to_graph(graph: nx.Graph, page: Page) -> None:
+def add_page_to_graph(graph: nx.Graph, page: Page) -> None:
     """Add starting page to graph"""
     graph.add_node(page.wikibase_item, page=page.to_serializable())
     logging.info('Added starting page "%s" to graph "%s"', page, graph.nodes(data=True))
@@ -64,16 +64,36 @@ async def fetch_pages_links(client: httpx.AsyncClient, page: Page) -> None:
 
 
 async def generate_lang_graph(
-    graph: nx.Graph, starting_page: Page, languages: Optional[Iterable[str]]
+    graph: nx.Graph, starting_page: Page, languages: Optional[Iterable[str]] = None
 ) -> nx.Graph:
 
     async with httpx.AsyncClient() as client:
         await fetch_starting_page(client=client, page=starting_page)
-        add_starting_page_to_graph(graph=graph, page=starting_page)
+        add_page_to_graph(graph=graph, page=starting_page)
         await fetch_starting_page_langlinks(
             client=client, page=starting_page, languages=languages
         )
         add_starting_pages_langlinks_to_graph(graph=graph, page=starting_page)
+
+        tasks = {}
+        for langlink in starting_page.all_language_versions:
+            tasks[langlink] = fetch_pages_links(client=client, page=langlink)
+        await asyncio.gather(*tasks.values())
+
+        for langlink in starting_page.all_language_versions:
+            graph.add_nodes_from(langlink.links_as_graph_nodes)
+            graph.add_edges_from(langlink.links_as_graph_edges)
+
+    return graph
+
+
+async def generate_lang_graph_revision(
+        graph: nx.Graph, starting_page: Page
+) -> nx.Graph:
+
+    async with httpx.AsyncClient() as client:
+        await fetch_starting_page(client=client, page=starting_page)
+        add_page_to_graph(graph=graph, page=starting_page)
 
         tasks = {}
         for langlink in starting_page.all_language_versions:

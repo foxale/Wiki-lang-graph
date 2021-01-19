@@ -3,10 +3,12 @@ from __future__ import annotations
 __all__ = ["Page", "PageKey", "PageKeySet", "RevisionKey", "RevisionKeys"]
 
 import asyncio
+import datetime
 import logging
 from collections import Coroutine
 from collections import Generator
 from collections import Iterable
+from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
 
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 Seconds = int
 
 
-@multiton("title", "language")
+@multiton("title", "language", "revision", "timestamp")
 class Page:
     _instances = {}
 
@@ -36,14 +38,14 @@ class Page:
         language: str,
         title: str,
         revision: str = None,
-        timestamp: str = None,
+        timestamp: datetime.datetime = None,
     ) -> None:
         super().__init__()
         self._aliases: set[str] = set()
         self._title: str = title
         self._language: str = language
         self._revision: Optional[str] = revision
-        self._timestamp: Optional[str] = timestamp
+        self._timestamp: Optional[datetime.datetime] = timestamp
         self._wikibase_item: Optional[str] = None
         self._displaytitle: Optional[str] = None
         self._description: Optional[str] = None
@@ -69,6 +71,11 @@ class Page:
         }
 
     def __repr__(self: Page) -> str:
+        if self._revision:
+            return (
+                f"OldPage(title={self._title}, timestamp={str(self._timestamp)}, oldid={self._revision}, displaytitle={self._displaytitle},"
+                f" lang={self._language}, wikibase_item={self._wikibase_item})"
+            )
         return (
             f"Page(title={self._title}, displaytitle={self._displaytitle},"
             f" lang={self._language}, wikibase_item={self._wikibase_item})"
@@ -126,8 +133,21 @@ class Page:
         return self._revisions
 
     @property
+    def timestamp(self: Page) -> datetime.datetime:
+        return self._timestamp
+
+    @property
     def timepoints_all_languages(self: Page) -> RevisionKeys[RevisionKey]:
         return self.revisions + self._langlinks.revisions
+
+    @property
+    def timepoints_all_languages_as_dict(self: Page) -> defaultdict[str, RevisionKeys[RevisionKey]]:
+        original_revision_mapping = {self.language: self.revisions}
+        lang_to_revision_mapping = defaultdict(RevisionKeys)
+        lang_to_revision_mapping |= original_revision_mapping
+        for rev in self._langlinks.revisions:
+            lang_to_revision_mapping[rev.language].append(rev)
+        return lang_to_revision_mapping
 
     def to_pagekey(self: Page) -> PageKey:
         return PageKey(language=self.language, title=self.title)
@@ -187,18 +207,24 @@ class Page:
                 **extra_params,
             )
             data = dict(mergedicts(data, new_data))
-        try:
-            page_number, page_data = data["query"]["pages"].popitem()
-            if page_number == "-1":
-                logger.warning(
-                    'Linked page "%s" does not exist and will be removed', self.title
-                )
-                self._valid = False
-                return
-        except KeyError:
-            page_number, page_data = "", ""
-            breakpoint()
-
+        if arg_type_ == 'query':
+            try:
+                page_number, page_data = data["query"]["pages"].popitem()
+                if page_number == "-1":
+                    logger.warning(
+                        'Linked page "%s" does not exist and will be removed', self.title
+                    )
+                    self._valid = False
+                    return
+            except KeyError as e:
+                page_data = None
+                logger.exception(e)
+        else:
+            try:
+                page_data = data["parse"]
+            except KeyError as e:
+                page_data = None
+                logger.exception(e)
         self._parse_page_data(data=page_data, add_language_to_wikibase_item=make_unique)
         self._add_aliases_to_class_instances()
 
@@ -221,7 +247,10 @@ class Page:
         try:
             self._wikibase_item = data["pageprops"]["wikibase_item"]
         except KeyError:
-            logger.error("No wikibase item %s", self)
+            try:
+                self._wikibase_item = [prop for prop in data["properties"] if prop['name'] == "wikibase_item"][0]["*"]
+            except KeyError:
+                logger.error("No wikibase item %s", self)
         with suppress(KeyError):
             rev_data = data["revisions"]
             self._revisions = RevisionKeys(
@@ -229,18 +258,16 @@ class Page:
                     title=self.title,
                     oldid=revision["revid"],
                     language=self.language,
-                    timestamp=revision["timestamp"],
+                    timestamp=dateutil.parser.parse(revision["timestamp"]),
                 )
                 for revision in rev_data
             )
         try:
             self._description = data["terms"]["description"]
-            print("description:", data["terms"]["description"])
         except KeyError:
             self._description = self._displaytitle
         with suppress(KeyError):
             backlinks_data = data["linkshere"]
-            print("backlinks:", data["linkshere"])
             self._backlinks = PageKeySet(
                 PageKey(
                     title=backlink['title'],
@@ -251,7 +278,8 @@ class Page:
         if add_language_to_wikibase_item:
             self._wikibase_item += f"__{self.language}"
         if self._timestamp:
-            self._wikibase_item += self._timestamp
+            self._wikibase_item += '~~'
+            self._wikibase_item += str(self._timestamp)
         if self.wikibase_item is None:
             logger.error("No wikibase: %s, %s", self.title, self.wikibase_item)
 
@@ -296,9 +324,10 @@ class Page:
             params["blredirect"] = True
 
         if type_ == "query":
-            params["titles"] = (self.title,)
+            params["titles"] = self.title
         else:
-            params["oldid"] = (self._revision,)
+            params["oldid"] = self._revision
+            params["prop"] += '|displaytitle|properties'
 
         response: Optional[httpx.Response] = None
         sleep_time: Seconds = 2
@@ -320,7 +349,7 @@ class Page:
 
     def _add_aliases_to_class_instances(self: Page) -> None:
         for alias in self._aliases:
-            Page._instances[(alias, self.language)] = self
+            Page._instances[(alias, self.language, self._revision, self._timestamp)] = self
 
 
 @dataclass(frozen=True, eq=True)
@@ -334,7 +363,7 @@ class RevisionKey:
     title: str
     oldid: str
     language: str
-    timestamp: str
+    timestamp: datetime.datetime
 
 
 class RevisionKeys(BaseList):
@@ -345,10 +374,7 @@ class RevisionKeys(BaseList):
                 isinstance(el, RevisionKey) for el in revision_keys
             ):
                 raise ValueError("RevisionKeys must by made of RevisionKey instances")
-            self._data.sort(
-                key=lambda x: dateutil.parser.parse(x.timestamp),
-                reverse=True,
-            )
+            self._data.sort(reverse=True, key=lambda x: x.timestamp)
 
 
 class PageKeySet(BaseSet):

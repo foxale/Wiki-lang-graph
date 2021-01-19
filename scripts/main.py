@@ -3,6 +3,7 @@ import os
 
 import asyncio
 
+import httpx
 import networkx as nx
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
@@ -17,7 +18,6 @@ from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
     initialize_starting_page,
 )
 from scripts.wikilanggraph.wikipedia_page import Page
-from scripts.wikilanggraph.wikipedia_page import RevisionKey
 from scripts.wikilanggraph.Model import Model
 
 
@@ -41,18 +41,20 @@ async def main() -> int:
     logging.info("Metrics: \n %s", metrics.to_string())
     logging.info("Timestamps: %s", timestamps)
 
-    temp_timestamp: RevisionKey = timestamps[0]
-    temp_graph = initialize_graph()
-    page = Page(
-        language=temp_timestamp.language,
-        title=temp_timestamp.title,
-        revision=temp_timestamp.oldid,
-        timestamp=temp_timestamp.timestamp,
-    )
-    logging.debug("Backlinks: %s", starting_page._back)
-    temp_graph = await generate_lang_graph(
-        graph=temp_graph, starting_page=page, languages=languages
-    )
+    async with httpx.AsyncClient() as client:
+        tasks = []
+        for timestamp in timestamps:
+            page = Page(
+                language=timestamp.language,
+                title=timestamp.title,
+                revision=timestamp.oldid,
+                timestamp=timestamp.timestamp,
+            )
+
+            task = await page.fetch_page(client=client, make_unique=True)
+            tasks.append(task)
+        await asyncio.gather(*tasks)
+
     return 0
 
 
@@ -63,8 +65,6 @@ def init_logging() -> None:
 
 if __name__ == "__main__":
     init_logging()
-    # asyncio.run(main(), debug=True)
-
     model = Model()
     view_model = ViewModel(model=model)
     view = View(view_model=view_model)
