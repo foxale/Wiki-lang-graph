@@ -24,7 +24,7 @@ class Model:
     async def fetch_revisions(self):
         async with httpx.AsyncClient() as client:
             tasks = []
-            for timestamp in self.timestamps:
+            for timestamp in self.timestamps[:20]:
                 page = Page(
                     title=timestamp.title,
                     language=timestamp.language,
