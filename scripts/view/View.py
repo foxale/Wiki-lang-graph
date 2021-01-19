@@ -1,3 +1,4 @@
+import logging
 import random
 
 from bokeh.document import without_document_lock
@@ -17,7 +18,7 @@ from bokeh.models import (
     Slider,
     TextInput,
     CheckboxGroup,
-    RadioGroup, ColumnDataSource,
+    RadioGroup
 )
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
@@ -209,7 +210,7 @@ class View:
                 doc.clear()
                 new_value = self.view_model.timeline_values[new]
                 self.view_model.selected_timeline_value = new_value
-                curdoc().add_next_tick_callback(self.view_model.update_timeline_value)
+                self.view_model.update_timeline_value()
                 header.text = "Select moment in time: %s" % new_value
                 self.modify_doc(doc)
 
@@ -223,19 +224,19 @@ class View:
             )
 
             def update_link(attr, old, new):
-                doc.clear()
 
                 async def proceed_update():
                     await self.view_model.update_link()
+                    doc.clear()
                     self.modify_doc(doc)
 
                 if self.view_model.is_existing(new):
                     print("YAY!")
                     self.input_error_message = None
                     self.view_model.link = new
-                    curdoc().add_next_tick_callback(proceed_update)
+                    curdoc().add_timeout_callback(proceed_update, timeout_milliseconds=0)
                 else:
-                    print("boooo....")
+                    doc.clear()
                     self.input_error_message = "Link %s not found." % old
                     self.view_model.link = None
                     self.modify_doc(doc)

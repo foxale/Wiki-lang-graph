@@ -7,6 +7,7 @@ import httpx
 import networkx as nx
 from bokeh.server.server import Server
 from tornado.ioloop import IOLoop
+from tornado.platform.asyncio import AsyncIOMainLoop
 
 from scripts.wikilanggraph import generate_lang_graph
 from scripts.view.View import View
@@ -19,6 +20,8 @@ from scripts.wikilanggraph.lang_graph.generate_lang_graph import (
 )
 from scripts.wikilanggraph.wikipedia_page import Page
 from scripts.wikilanggraph.Model import Model
+
+AsyncIOMainLoop().install()
 
 
 async def main() -> int:
