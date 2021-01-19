@@ -79,10 +79,19 @@ class ViewModel:
             use_backlinks=False
         )
         self._update_network()
+
+        # slightly ugly solution to cope with new names for left nodes
+        # selected languages must be updated somehow, to avoid situation
+        # where there is less left nodes than selected languages to render plot properly
         self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
+        selected = []
+        for lang in self.available_languages:
+            for s_lang in self.selected_languages:
+                if s_lang in lang:
+                    selected.append(lang)
+        self.selected_languages = selected
+
         self._find_metrics_by_languages()
-        self.available_languages = [str(node).split("__")[1][:2] for node in self.left_nodes]
-        self.selected_languages = [lang for lang in self.selected_languages if lang in self.available_languages]
 
     def _update_network(self):
         self.network = self.model.network
