@@ -69,19 +69,20 @@ class ViewModel:
 
         self._find_metrics_by_languages()
 
-    def update_timeline_value(self):
+    async def update_timeline_value(self):
         logging.debug("Timestamp: %s" % self.selected_timeline_value)
         article_name, language = self._parse_article_name()
-        self.model.fetch_revisions()
-        self.model.get_article_timestamp(
+        await self.model.get_article_timestamp(
             article_name=article_name,
             article_language=language,
             moment_in_time=self.selected_timeline_value,
             use_backlinks=False
         )
-
         self._update_network()
+        self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
         self._find_metrics_by_languages()
+        self.available_languages = [str(node).split("__")[1][:2] for node in self.left_nodes]
+        self.selected_languages = [lang for lang in self.selected_languages if lang in self.available_languages]
 
     def _update_network(self):
         self.network = self.model.network
