@@ -72,7 +72,8 @@ class ViewModel:
     def update_timeline_value(self):
         logging.debug("Timestamp: %s" % self.selected_timeline_value)
         article_name, language = self._parse_article_name()
-        await self.model.get_article_data(
+        self.model.fetch_revisions()
+        self.model.get_article_timestamp(
             article_name=article_name,
             article_language=language,
             moment_in_time=self.selected_timeline_value,

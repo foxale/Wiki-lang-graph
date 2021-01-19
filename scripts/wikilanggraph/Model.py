@@ -21,14 +21,6 @@ class Model:
         self.df = None
         self.timestamps = None
 
-    """
-    this method should return:
-    - a network representing article and links (for all available languages)
-    - a pandas dataframe containing information on consecutive nodes of network: title, language, short fragment,
-    is node a backlink, is node right-sided (is a language version)
-    - a list of available moments in time for analysis of previous versions
-    """
-
     async def fetch_revisions(self):
         async with httpx.AsyncClient() as client:
             tasks = []
@@ -44,7 +36,7 @@ class Model:
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
-    async def get_article_timestamp(self, article_name: str, moment_in_time: str, article_language='en'):
+    async def get_article_timestamp(self, article_name: str, moment_in_time: str, article_language='en', use_backlinks=False):
         async with httpx.AsyncClient() as client:
             graph = initialize_graph()
             starting_page = initialize_starting_page(
@@ -72,9 +64,10 @@ class Model:
                 graph.add_nodes_from(nearest_revision_page.links_as_graph_nodes)
                 graph.add_edges_from(nearest_revision_page.links_as_graph_edges)
 
+        self.metrics = calculate_dissimilarity_metrics(graph=graph)
         self.network = graph
 
-    async def get_article_data(self, article_name: str, article_language='en'):
+    async def get_article_data(self, article_name: str, article_language='en', use_backlinks=False):
         graph = initialize_graph()
         starting_page = initialize_starting_page(
             language=article_language, title=article_name
@@ -89,9 +82,3 @@ class Model:
         logger.info("Graph: \n %s", nx.info(graph))
         logger.info("Metrics: \n %s", self.metrics.to_string())
         logger.info("Timestamps: %s", self.timestamps)
-
-
-
-
-
-
