@@ -234,13 +234,8 @@ class View:
 
                 async def proceed_update():
                     self.view_model.article = new
-                    try:
-                        self.input_error_message = None
-                        await self.view_model.update_article()
-                    except Exception as e:
-                        self.input_error_message = str(e)
-                        self.view_model.network = None
-                        self.view_model.article = None
+                    self.input_error_message = None
+                    await self.view_model.update_article()
                     doc.clear()
                     self.modify_doc(doc)
 
