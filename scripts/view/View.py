@@ -218,8 +218,8 @@ class View:
             )
 
             def update_timeline_value(attr, old, new):
-                doc.clear()
-                make_loading_screen()
+                # doc.clear()
+                # make_loading_screen()
 
                 async def proceed_update():
                     doc.clear()
@@ -356,8 +356,8 @@ class View:
                         make_static_header("Select from available languages"),
                         make_language_checkbox(),
                         make_timeline_slider(),
-                        make_static_header("What kind of analysis is performed?"),
-                        make_analysis_mode_radio(),
+                        # make_static_header("What kind of analysis is performed?"),
+                        # make_analysis_mode_radio(),
                         margin=(10, 10, 10, 10),
                     )
             column2 = column(

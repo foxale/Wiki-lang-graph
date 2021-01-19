@@ -47,7 +47,7 @@ class ViewModel:
         self.selected_timeline_value = self.timeline_values[0]
 
     def update_selected_languages(self, selected):
-        logging.debug("selected languages:", selected)
+        logging.debug("selected languages: %s", selected)
         self.selected_languages = selected
         self._find_metrics_by_languages()
 
