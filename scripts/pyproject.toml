@@ -5,7 +5,7 @@ description = "Wikipedia language graph analyser"
 authors = ["Paweł Lis <lispawel24@gmail.com>"]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "3.9"
 bokeh = "^2.2.3"
 networkx = "^2.5"
 httpx = "^0.16.1"

@@ -55,16 +55,12 @@ class ViewModel:
         logging.debug(self.analysis_mode)
         article_name, language = self._parse_article_name()
 
-        if self.analysis_mode is AnalysisMode.NO_BACKLINKS:
-            self.use_backlinks = False
-        else:
-            self.use_backlinks = True
+        self.use_backlinks = self.analysis_mode is not AnalysisMode.NO_BACKLINKS
 
         await self.model.get_article_data(
             article_name=article_name,
             article_language=language,
-            moment_in_time=self.timeline_values.index(self.selected_timeline_value),
-            use_backlinks=False
+            moment_in_time=self.selected_timeline_value,
         )
 
         self._find_metrics_by_languages()
@@ -75,8 +71,7 @@ class ViewModel:
         await self.model.get_article_timestamp(
             article_name=article_name,
             article_language=language,
-            moment_in_time=self.selected_timeline_value,
-            use_backlinks=False
+            moment_in_time=self.selected_timeline_value
         )
         self._update_network()
 
@@ -85,13 +80,8 @@ class ViewModel:
         # where there is less left nodes than selected languages to render plot properly
         self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
         initially_selected = self.selected_languages
-        selected = []
-        for lang in self.available_languages:
-            for s_lang in self.selected_languages:
-                if s_lang in lang:
-                    selected.append(lang)
-        self.selected_languages = selected
 
+        self.selected_languages = [lang for lang in self.available_languages for s_lang in self.selected_languages if s_lang in lang]
         self._find_metrics_by_languages()
 
         self.available_languages = [str(node).split("__")[1][:2] for node in self.left_nodes]
@@ -115,4 +105,4 @@ class ViewModel:
             else [("", ""), 0]
 
     def _parse_article_name(self):
-        return self.article.split(' | ') if ' | ' in self.article else (self.article, None)
+        return [el.strip() for el in self.article.strip().split('|')]

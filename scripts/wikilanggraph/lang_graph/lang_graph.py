@@ -14,7 +14,7 @@ class LangGraph(nx.Graph):
         return repr(super())
 
     def __contains__(self, item):
-        return item in super()
+        return super().__contains__(item)
 
     def __iter__(self):
         return super().__iter__()

@@ -1,9 +1,13 @@
 import logging
+import random
 
 import networkx as nx
 from bokeh.document import without_document_lock
 from bokeh.io import curdoc
 from bokeh.layouts import column, row
+from bokeh.models import ColumnDataSource
+from bokeh.models import DataTable
+from bokeh.models import DateSlider
 from bokeh.models import (
     Plot,
     Range1d,
@@ -21,6 +25,8 @@ from bokeh.models import (
     RadioGroup,
     Div
 )
+from bokeh.models import Slider
+from bokeh.models import TableColumn
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 
@@ -45,19 +51,13 @@ class View:
             screen = loading_text
             doc.add_root(screen)
 
-        def determine_nodes_visibility(G, left_nodes, right_nodes):
+        def determine_nodes_visibility(G: nx.Graph, left_nodes):
             languages_indices = [self.view_model.available_languages.index(lang) for lang in
-                                 self.view_model.selected_languages]
-            visible_left_nodes = [left_nodes[i] for i in languages_indices]
-            visible_right_nodes = []
-            for e in G.edges:
-                if e[0] in visible_left_nodes:
-                    visible_right_nodes.append(e[1])
-
+                                 set(self.view_model.selected_languages) & set(self.view_model.available_languages)]
+            visible_left_nodes = set(left_nodes[i] for i in languages_indices)
+            visible_right_nodes = set(node for left_node in visible_left_nodes for node in nx.neighbors(G, left_node))
             visibility = [
-                True
-                if (n in visible_right_nodes or n in visible_left_nodes)
-                else False
+                n in visible_right_nodes or n in visible_left_nodes
                 for n in list(G)
             ]
             return visibility
@@ -77,10 +77,9 @@ class View:
             ]
             self.node_renderer_data_source["color"] = colors
 
-            self.node_renderer_data_source["visibility"] = determine_nodes_visibility(G=G, left_nodes=left_nodes,
-                                                                                      right_nodes=right_nodes)
+            self.node_renderer_data_source["visibility"] = determine_nodes_visibility(G=G, left_nodes=left_nodes)
 
-            max_right_degree = max([G.degree(r) for r in right_nodes])
+            max_right_degree = max(G.degree(r) for r in right_nodes)
             alpha = [
                 0 if self.node_renderer_data_source["visibility"][list(G).index(n)] is False
                 else 0.5 if n in left_nodes
@@ -211,6 +210,23 @@ class View:
                     self.view_model.selected_timeline_value
                 )
             )
+
+            # slider = DateSlider(
+            #     start=self.view_model.timeline_values[0],
+            #     end=self.view_model.timeline_values[-1],
+            #     value=self.view_model.selected_timeline_value,
+            #     show_value=False,
+            #     step=1000 * 60 * 5,
+            #     format='%Y-%m-%d %H:%M'
+            # )
+            # slider = Slider(
+            #     start=0,
+            #     end=len(self.view_model.timeline_values)-1,
+            #     value=self.view_model.timeline_values.index(self.view_model.selected_timeline_value),
+            #     step=1000 * 60 * 60 * 24,
+            #     # format='%Y-%m-%d %H:%M'
+            # )
+
             slider = Slider(
                 start=0,
                 end=len(self.view_model.timeline_values) - 1,
@@ -220,6 +236,9 @@ class View:
             )
 
             def update_timeline_value(attr, old, new):
+                index = slider.value
+
+                logging.debug("Update timeline value %s", new)
                 # doc.clear()
                 # make_loading_screen()
 
@@ -228,7 +247,7 @@ class View:
                     new_value = self.view_model.timeline_values[new]
                     self.view_model.selected_timeline_value = new_value
                     await self.view_model.update_timeline_value()
-                    header.text = "Select moment in time: %s" % new_value
+                    header.text = f"Select moment in time: {new}"
                     doc.clear()
                     self.modify_doc(doc)
 
@@ -238,8 +257,8 @@ class View:
             return column(header, slider)
 
         def make_text_input():
-            text_input = TextInput(
-                title="Insert link to wikipedia article",
+            title_input = TextInput(
+                title="Search for the Wikipedia article",
                 value="article title | language" if self.view_model.article is None else self.view_model.article,
             )
 
@@ -256,8 +275,8 @@ class View:
 
                 curdoc().add_next_tick_callback(proceed_update)
 
-            text_input.on_change("value", update_link)
-            return text_input
+            title_input.on_change("value", update_link)
+            return title_input
 
         def make_static_header(text, font_size='100%', color='black', margin='0 0 0 0'):
             return Div(text=text, style={'font-size': font_size, 'color': color, 'margin': margin})
@@ -266,16 +285,14 @@ class View:
             def update_selected(attr, old, new):
                 doc.clear()
                 make_loading_screen()
-                selection = list()
-                for i in new:
-                    selection.append(self.view_model.available_languages[i])
+                selection = [self.view_model.available_languages[i] for i in new]
                 self.view_model.update_selected_languages(selection)
                 doc.clear()
                 self.modify_doc(doc)
 
             options = self.view_model.available_languages
             checked = self.view_model.selected_languages
-            active = [options.index(c) for c in checked]
+            active = [options.index(c) for c in set(checked) & set(options)]
             checkbox_group = CheckboxGroup(
                 name="languages", labels=options, active=active
             )
@@ -309,6 +326,23 @@ class View:
             )
             return text_output
 
+        def make_dissimilarity_table():
+            df = self.view_model.filtered_metrics.to_frame().reset_index()
+            df = df.round(3)
+            df = df.rename(columns={'lang_1': 'Language 1', 'lang_2': 'Language 2'})
+
+            columns = [TableColumn(field=c, title=c) for c in df.columns]
+            dissimilarity_table = DataTable(
+                columns=columns,
+                source=ColumnDataSource(df),
+                autosize_mode='fit_viewport',
+                height_policy='fit'
+            )
+            return column(
+                make_static_header(text="Dissimilarity score"),
+                dissimilarity_table
+            )
+
         if self.input_error_message is not None:
             logging.info("There was error")
             column1 = column(
@@ -341,8 +375,6 @@ class View:
                 margin=(10, 10, 10, 0),
             )
             column2 = column(
-                make_static_header("Most different versions: ", color='dark-gray'),
-                make_static_header("Difference is: ", color='dark-gray'),
                 prepare_plot(),
                 margin=(10, 10, 10, 0),
             )
@@ -370,11 +402,11 @@ class View:
                 margin=(10, 10, 10, 0),
             )
             column2 = column(
-                make_static_header("Most different versions: %s %s" % self.view_model.max_metric[0], color='dark-gray'),
-                make_static_header("Difference is: %f" % self.view_model.max_metric[1], color='dark-gray'),
-                make_graph(),
-                margin=(10, 10, 10, 0),
-            )
+                        # make_static_header("Most different versions: %s %s" % self.view_model.max_metric[0]),
+                        # make_static_header("Difference is: %f" % self.view_model.max_metric[1]),
+                        make_graph(),
+                        margin=(10, 10, 10, 0)
+                    )
             column2.sizing_mode = 'stretch_width'
             doc.add_root(
                 column(
