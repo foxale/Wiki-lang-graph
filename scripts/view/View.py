@@ -397,6 +397,7 @@ class View:
                 make_static_header("Select from available languages"),
                 make_language_checkbox(),
                 make_timeline_slider(),
+                make_dissimilarity_table(),
                 # make_static_header("What kind of analysis is performed?"),
                 # make_analysis_mode_radio(),
                 margin=(10, 10, 10, 0),
