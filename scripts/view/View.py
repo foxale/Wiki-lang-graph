@@ -1,5 +1,4 @@
 import logging
-import random
 
 import networkx as nx
 from bokeh.document import without_document_lock
@@ -19,12 +18,15 @@ from bokeh.models import (
     Slider,
     TextInput,
     CheckboxGroup,
-    RadioGroup
+    RadioGroup,
+    Div
 )
 from bokeh.palettes import Spectral4
 from bokeh.plotting import from_networkx
 
 from scripts.view.Layouts import degree_bipartite_layout
+
+TITLE = "<b>Wiki-lang-graph</b>"
 
 
 class View:
@@ -257,8 +259,8 @@ class View:
             text_input.on_change("value", update_link)
             return text_input
 
-        def make_static_header(text):
-            return Paragraph(text=text)
+        def make_static_header(text, font_size='100%', color='black', margin='0 0 0 0'):
+            return Div(text=text, style={'font-size': font_size, 'color': color, 'margin': margin})
 
         def make_language_checkbox():
             def update_selected(attr, old, new):
@@ -310,66 +312,78 @@ class View:
         if self.input_error_message is not None:
             logging.info("There was error")
             column1 = column(
-                        make_static_header("Wiki-lang-graph"),
-                        make_text_input(),
-                        make_error_text(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_text_input(),
+                make_error_text(),
+                margin=(10, 10, 10, 0),
+            )
             column2 = column(
-                        make_static_header("Most different versions: "),
-                        make_static_header("Difference is: "),
-                        prepare_plot(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_static_header("Most different versions: ", color='dark-gray'),
+                make_static_header("Difference is: ", color='dark-gray'),
+                prepare_plot(),
+                margin=(10, 10, 10, 0),
+            )
             column2.sizing_mode = 'stretch_width'
             doc.add_root(
-                row(
-                    column1,
-                    column2
+                column(
+                    make_static_header(TITLE, font_size='120%'),
+                    row(
+                        column1,
+                        column2
+                    ),
+                    margin=(10, 10, 0, 10),
+                    sizing_mode='stretch_width'
                 )
             )
         elif self.input_error_message is None and self.view_model.network is None:
             logging.info("current network was None. Display start screen")
             column1 = column(
-                        make_static_header("Wiki-lang-graph"),
-                        make_text_input(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_text_input(),
+                margin=(10, 10, 10, 0),
+            )
             column2 = column(
-                        make_static_header("Most different versions: "),
-                        make_static_header("Difference is: "),
-                        prepare_plot(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_static_header("Most different versions: ", color='dark-gray'),
+                make_static_header("Difference is: ", color='dark-gray'),
+                prepare_plot(),
+                margin=(10, 10, 10, 0),
+            )
             column2.sizing_mode = 'stretch_width'
             doc.add_root(
-                row(
-                    column1,
-                    column2
+                column(
+                    make_static_header(TITLE, font_size='120%'),
+                    row(
+                        column1,
+                        column2
+                    ),
+                    margin=(10, 10, 0, 10),
+                    sizing_mode='stretch_width'
                 )
             )
         else:
             logging.info("Network was present. Proceed to analysis screen.")
             column1 = column(
-                        make_static_header("Wiki-lang-graph"),
-                        make_text_input(),
-                        make_static_header("Select from available languages"),
-                        make_language_checkbox(),
-                        make_timeline_slider(),
-                        # make_static_header("What kind of analysis is performed?"),
-                        # make_analysis_mode_radio(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_text_input(),
+                make_static_header("Select from available languages"),
+                make_language_checkbox(),
+                make_timeline_slider(),
+                # make_static_header("What kind of analysis is performed?"),
+                # make_analysis_mode_radio(),
+                margin=(10, 10, 10, 0),
+            )
             column2 = column(
-                        make_static_header("Most different versions: %s %s" % self.view_model.max_metric[0]),
-                        make_static_header("Difference is: %f" % self.view_model.max_metric[1]),
-                        make_graph(),
-                        margin=(10, 10, 10, 10),
-                    )
+                make_static_header("Most different versions: %s %s" % self.view_model.max_metric[0], color='dark-gray'),
+                make_static_header("Difference is: %f" % self.view_model.max_metric[1], color='dark-gray'),
+                make_graph(),
+                margin=(10, 10, 10, 0),
+            )
             column2.sizing_mode = 'stretch_width'
             doc.add_root(
-                row(
-                    column1,
-                    column2,
+                column(
+                    make_static_header(TITLE, font_size='120%'),
+                    row(
+                        column1,
+                        column2
+                    ),
+                    margin=(10, 10, 0, 10),
+                    sizing_mode='stretch_width'
                 )
             )
