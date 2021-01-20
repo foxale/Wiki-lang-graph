@@ -26,6 +26,7 @@ class ViewModel:
             AnalysisMode.USE_BACKLINKS,
         ]
         self.use_backlinks = False
+        self.filtered_metrics = None
         self.max_metric = None
 
     async def update_article(self):
@@ -41,15 +42,26 @@ class ViewModel:
         self.colors = ["#%06x" % random.randint(0, 0xFFFFFF) for _ in self.left_nodes]
         self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
         self.selected_languages = self.available_languages
-        metrics = self.model.metrics.sort_values(ascending=False)
-        self.max_metric = [metrics.index[0], metrics[0]]
+        self.filtered_metrics = self.model.metrics.sort_values(ascending=False)
+        self.max_metric = [self.filtered_metrics.index[0], self.filtered_metrics[0]]
         self.timeline_values = [t.timestamp for t in self.model.timestamps]
         self.selected_timeline_value = self.timeline_values[0]
 
     def update_selected_languages(self, selected):
         logging.debug("selected languages: %s", selected)
         self.selected_languages = selected
+
+        # slightly ugly solution to cope with new names for left nodes
+        # selected languages must be updated somehow, to avoid situation
+        # where there is less left nodes than selected languages to render plot properly
+        self.available_languages = [str(node).split("__")[1] for node in self.left_nodes]
+        initially_selected = selected
+
+        self.selected_languages = [lang for lang in self.available_languages for s_lang in self.selected_languages if lang.startswith(s_lang)]
         self._find_metrics_by_languages()
+
+        self.available_languages = [str(node).split("__")[1].split(' ~ ')[0] for node in self.left_nodes]
+        self.selected_languages = [l for l in initially_selected if l in self.available_languages]
 
     async def update_analysis_mode(self):
         logging.debug(self.analysis_mode)
@@ -84,8 +96,8 @@ class ViewModel:
         self.selected_languages = [lang for lang in self.available_languages for s_lang in self.selected_languages if s_lang in lang]
         self._find_metrics_by_languages()
 
-        self.available_languages = [str(node).split("__")[1][:2] for node in self.left_nodes]
-        self.selected_languages = initially_selected
+        self.available_languages = [str(node).split("__")[1].split(' ~ ')[0] for node in self.left_nodes]
+        self.selected_languages = [l for l in initially_selected if l in self.available_languages]
 
     def _update_network(self):
         self.network = self.model.network
@@ -94,14 +106,14 @@ class ViewModel:
 
     def _find_metrics_by_languages(self):
         metrics = self.model.metrics
-        filtered_by_visible_languages = metrics[
+        self.filtered_metrics = metrics[
             metrics.index.get_level_values('lang_1').isin(self.selected_languages)
             & metrics.index.get_level_values('lang_2').isin(self.selected_languages)
             ].sort_values(ascending=False)
 
         self.max_metric = \
-            [filtered_by_visible_languages.index[0], filtered_by_visible_languages[0]] \
-            if len(filtered_by_visible_languages) > 0 \
+            [self.filtered_metrics.index[0], self.filtered_metrics[0]] \
+            if len(self.filtered_metrics) > 0 \
             else [("", ""), 0]
 
     def _parse_article_name(self):
