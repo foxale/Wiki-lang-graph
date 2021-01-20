@@ -5,12 +5,14 @@ __all__ = ["Page", "PageKey", "PageKeySet", "RevisionKey", "RevisionKeys"]
 import asyncio
 import datetime
 import logging
+import re
 from collections import Coroutine
 from collections import Generator
 from collections import Iterable
 from collections import defaultdict
 from contextlib import suppress
 from dataclasses import dataclass
+from urllib.parse import unquote
 
 import dateutil.parser
 from typing import Any
@@ -169,11 +171,11 @@ class Page:
         self._langlinks.remove_nonexistent()
 
     async def fetch_links(
-        self: Page, client: httpx.AsyncClient, avoid: str = ":"
+        self: Page, client: httpx.AsyncClient
     ) -> None:
         if not self._fetched:
             await self.fetch_page(client=client)
-        self._links.filter_titles(avoid=avoid)
+        # self._links.filter_titles(avoid=avoid)
         coroutines = await self._links.fetch_pages_coroutines(client=client)
         await asyncio.gather(*coroutines)
         self._links.remove_nonexistent()
@@ -231,7 +233,8 @@ class Page:
     def _parse_page_data(
         self: Page, data: dict[str, Any], add_language_to_wikibase_item: bool = False
     ) -> None:
-        self._displaytitle = data["displaytitle"]
+        # self._displaytitle = re.sub('<[^<]+?>', '', data["displaytitle"])
+        self._displaytitle = unquote(data['displaytitle'])
         try:
             links = data["links"]
         except KeyError:
@@ -245,7 +248,7 @@ class Page:
             except KeyError:
                 self._links = PageKeySet(
                     PageKey(language=self._language, title=link["*"])
-                    for link in links
+                    for link in links if link["ns"] == 0
                 )
         with suppress(KeyError):
             self._langlinks = PageKeySet(
@@ -261,6 +264,7 @@ class Page:
                 self._wikibase_item = [prop for prop in data["properties"] if prop['name'] == "wikibase_item"][0]["*"]
             except KeyError:
                 logger.error("No wikibase item %s", self)
+                self._valid = False
         with suppress(KeyError):
             rev_data = data["revisions"]
             self._revisions = RevisionKeys(
@@ -268,7 +272,7 @@ class Page:
                     title=self.title,
                     oldid=revision["revid"],
                     language=self.language,
-                    timestamp=dateutil.parser.parse(revision["timestamp"]),
+                    timestamp=dateutil.parser.parse(revision["timestamp"]).replace(tzinfo=None),
                 )
                 for revision in rev_data
             )
@@ -288,8 +292,9 @@ class Page:
         if add_language_to_wikibase_item:
             self._wikibase_item += f"__{self.language}"
         if self._timestamp:
-            self._wikibase_item += '~~'
+            self._wikibase_item += ' ~ ('
             self._wikibase_item += str(self._timestamp)
+            self._wikibase_item += ')'
         if self.wikibase_item is None:
             logger.error("No wikibase: %s, %s", self.title, self.wikibase_item)
 
@@ -316,6 +321,7 @@ class Page:
         if links:
             params["prop"] += "|links"
             params["pllimit"] = "max"
+            params["plnamespace"] = "0"
 
         if revisions:
             params["prop"] += "|revisions"
@@ -329,7 +335,7 @@ class Page:
 
         backlinks = revisions
         if backlinks:
-            params["prop"] += "|linkshere"
+            # params["prop"] += "|linkshere"
             params["lhlimit"] = "max"
             params["blredirect"] = True
 
@@ -412,11 +418,11 @@ class PageKeySet(BaseSet):
             page_key for page_key in self._data if page_key.language in languages
         }
 
-    def filter_titles(self: PageKeySet, avoid: str) -> None:
-        if avoid:
-            self._data = {
-                page_key for page_key in self._data if avoid not in page_key.title
-            }
+    # def filter_titles(self: PageKeySet, avoid: str) -> None:
+    #     if avoid:
+    #         self._data = {
+    #             page_key for page_key in self._data if avoid not in page_key.title
+    #         }
 
     def graph_nodes_generator(
         self: PageKeySet,

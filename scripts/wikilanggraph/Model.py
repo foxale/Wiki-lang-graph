@@ -22,9 +22,10 @@ class Model:
         self.timestamps = None
 
     async def fetch_revisions(self):
+        self.timestamps = self.timestamps[:20]
         async with httpx.AsyncClient() as client:
             tasks = []
-            for timestamp in self.timestamps[:20]:
+            for timestamp in self.timestamps:
                 page = Page(
                     title=timestamp.title,
                     language=timestamp.language,
@@ -36,7 +37,7 @@ class Model:
                 tasks.append(task)
             await asyncio.gather(*tasks)
 
-    async def get_article_timestamp(self, article_name: str, moment_in_time: str, article_language='en', use_backlinks=False):
+    async def get_article_timestamp(self, article_name: str, moment_in_time: str, article_language='en'):
         async with httpx.AsyncClient() as client:
             graph = initialize_graph()
             starting_page = initialize_starting_page(
@@ -45,7 +46,7 @@ class Model:
             languages_to_revisions = starting_page.timepoints_all_languages_as_dict
 
             for language, revisions in languages_to_revisions.items():
-                past_revisions = RevisionKeys(revision for revision in revisions if revision.timestamp < moment_in_time)
+                past_revisions = RevisionKeys(revision for revision in revisions if revision.timestamp <= moment_in_time)
                 if not past_revisions:
                     logger.warning("At time %s, the article %s was not available in language %s", str(moment_in_time), starting_page.title, language)
                     continue
@@ -67,13 +68,13 @@ class Model:
         self.metrics = calculate_dissimilarity_metrics(graph=graph)
         self.network = graph
 
-    async def get_article_data(self, article_name: str, article_language='en', use_backlinks=False):
+    async def get_article_data(self, article_name: str, article_language='en'):
         graph = initialize_graph()
         starting_page = initialize_starting_page(
             language=article_language, title=article_name
         )
         graph = await generate_lang_graph(
-            graph=graph, starting_page=starting_page, languages=('pl', 'en', 'de')
+            graph=graph, starting_page=starting_page, languages=None # ('pl', 'ru', 'fr', 'simple') # ('pl', 'en', 'de', 'ru', 'fr', 'simple')
         )
         self.metrics = calculate_dissimilarity_metrics(graph=graph)
         self.timestamps = starting_page.timepoints_all_languages
